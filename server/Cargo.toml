@@ -1,0 +1,32 @@
+[package]
+name = "jot-server"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+axum = { version = "0.7.9", features = ["macros"] }
+axum-extra = { version = "0.9.6", features = ["cookie", "query"] }
+serde = { version = "1.0.215", features = ["derive"] }
+serde_json = { version = "1.0.133" }
+tokio = { version = "1.41.1", features = ["full"] }
+tower = { version = "0.5.2", features = ["util"] }
+tower-http = { version = "0.6.2", features = ["fs", "trace", "add-extension"] }
+tower-sessions = { version = "0.13.0" }
+tracing = "0.1.40"
+tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
+chrono = { version = "0.4.38", features = ["serde"] }
+thiserror = { version = "2.0.7" }
+sqlx = { version = "=0.8.2", features = ["runtime-tokio", "sqlite", "chrono"] }
+dotenvy = { version = "0.15.7" }
+jsonwebtoken = { version = "9.3.0" }
+argon2 = "0.5.3"
+aide = { version = "0.13.4", features = [
+	"axum",
+	"redoc",
+	"macros",
+	"axum-extra-query",
+] }
+schemars = "0.8"
+
+[dev-dependencies]
+axum-test = { version = "16.4.1" }

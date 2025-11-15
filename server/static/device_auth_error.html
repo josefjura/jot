@@ -1,0 +1,19 @@
+<div class="container">
+	<div class="header">
+			<h2>Jot Auth</h2>
+	</div>
+	<form hx-post="/auth/page/<<CODE>>" hx-target="body" hx-swap="innerHTML">
+		<div class="error-message"><<ERROR>></div>	
+		<div class="input-group">
+					<label>Email</label>
+					<input type="email" name="email" value="<<EMAIL>>" required>
+			</div>
+			<div class="input-group">
+					<label>Password</label>
+					<input type="password" name="password" required>
+			</div>
+			<div class="input-group">
+					<button type="submit" class="btn" name="device_auth">Allow access</button>
+			</div>
+	</form>
+</div>
