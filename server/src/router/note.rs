@@ -43,11 +43,16 @@ pub fn note_routes(app_state: AppState) -> ApiRouter<AppState> {
     with_auth_middleware(router, app_state)
 }
 
-pub async fn get_all(State(state): State<AppState>) -> impl IntoApiResponse {
-    let items = db::notes::get_all(state.db).await.map_err(|e| {
-        tracing::error!("Failed to get all repositories: {:?}", e);
-        RestError::Database(e)
-    });
+pub async fn get_all(
+    State(state): State<AppState>,
+    Extension(user): Extension<User>,
+) -> impl IntoApiResponse {
+    let items = db::notes::get_all_by_user(state.db, user.id)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to get all notes for user: {:?}", e);
+            RestError::Database(e)
+        });
 
     match items {
         Ok(items) => Json(items).into_response(),
@@ -125,14 +130,24 @@ pub fn get_all_by_owner_docs(op: TransformOperation) -> TransformOperation {
         .response_with::<401, (), _>(|res| res.description("Not authenticated"))
 }
 
-pub async fn get_by_id(Path(id): Path<i64>, State(state): State<AppState>) -> impl IntoApiResponse {
+pub async fn get_by_id(
+    Path(id): Path<i64>,
+    State(state): State<AppState>,
+    Extension(user): Extension<User>,
+) -> impl IntoApiResponse {
     let item = db::notes::get_by_id(state.db, id).await.map_err(|e| {
-        tracing::error!("Failed to get all repositories: {:?}", e);
+        tracing::error!("Failed to get note by id: {:?}", e);
         RestError::Database(e)
     });
 
     match item {
-        Ok(Some(item)) => Json(item).into_response(),
+        Ok(Some(item)) => {
+            // Verify the authenticated user owns this note
+            if item.user_id != user.id {
+                return RestError::Forbidden.into_response();
+            }
+            Json(item).into_response()
+        }
         Ok(None) => RestError::NotFound.into_response(),
         Err(e) => e.into_response(),
     }
@@ -193,12 +208,15 @@ pub fn create_docs(op: TransformOperation) -> TransformOperation {
 
 pub async fn post_search(
     State(state): State<AppState>,
+    Extension(user): Extension<User>,
     Json(params): Json<NoteSearchRequest>,
 ) -> impl IntoApiResponse {
-    let items = db::notes::search(state.db, params).await.map_err(|e| {
-        tracing::error!("Failed to get all repositories: {:?}", e);
-        RestError::Database(e)
-    });
+    let items = db::notes::search(state.db, user.id, params)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to search notes: {:?}", e);
+            RestError::Database(e)
+        });
 
     match items {
         Ok(items) => Json(items).into_response(),

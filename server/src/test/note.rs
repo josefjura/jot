@@ -18,7 +18,10 @@ async fn note_get_all_ok(db: sqlx::Pool<sqlx::Sqlite>) {
 
     let json = response.json::<Vec<Note>>();
 
-    assert_eq!(5, json.len());
+    // Alice (user_id 1) has 2 notes, not all 5
+    assert_eq!(2, json.len());
+    // Verify they're all owned by user 1
+    assert!(json.iter().all(|note| note.user_id == 1));
 }
 
 #[sqlx::test(fixtures("user"))]
@@ -114,7 +117,7 @@ async fn note_search_lines(db: sqlx::Pool<sqlx::Sqlite>) {
         .post("/note/search")
         .authorization_bearer(token)
         .json(&json!({
-                "lines": 2
+                "tag": []
         }))
         .await;
 
@@ -122,7 +125,10 @@ async fn note_search_lines(db: sqlx::Pool<sqlx::Sqlite>) {
 
     let json = response.json::<Vec<Note>>();
 
-    assert_eq!(5, json.len());
+    // Alice (user_id 1) has 2 notes
+    assert_eq!(2, json.len());
+    // Verify they're all owned by user 1
+    assert!(json.iter().all(|note| note.user_id == 1));
 }
 
 #[sqlx::test(fixtures("user", "note"))]
@@ -143,9 +149,10 @@ async fn note_search_tag(db: sqlx::Pool<sqlx::Sqlite>) {
 
     let json = response.json::<Vec<Note>>();
 
-    assert_eq!(2, json.len());
+    // Only Alice's note with tag1 (note ID 1), not note 3 which belongs to Bob
+    assert_eq!(1, json.len());
     assert_eq!(1, json[0].id);
-    assert_eq!(3, json[1].id);
+    assert_eq!(1, json[0].user_id);
 
     let response = server
         .post("/note/search")
@@ -173,12 +180,52 @@ async fn note_search_term(db: sqlx::Pool<sqlx::Sqlite>) {
         .post("/note/search")
         .authorization_bearer(token.clone())
         .json(&json!({
-            "term": "note"
+            "term": "test",
+            "tag": []
         }))
         .await;
 
+    response.assert_status_ok();
+
     let json = response.json::<Vec<Note>>();
 
-    assert_eq!(1, json.len());
-    assert_eq!(5, json[0].id);
+    // Alice has 2 notes with "test" in the content (test 1, test 2)
+    assert_eq!(2, json.len());
+    assert!(json.iter().all(|note| note.user_id == 1));
+    assert!(json.iter().all(|note| note.content.contains("test")));
+}
+
+#[sqlx::test(fixtures("user", "note"))]
+async fn note_get_by_id_forbidden_other_user(db: sqlx::Pool<sqlx::Sqlite>) {
+    let server = setup_server(db);
+
+    let token = test::login(&server).await; // Login as Alice (user 1)
+
+    // Try to access Bob's note (ID 3 belongs to user 2)
+    let response = server.get("/note/3").authorization_bearer(token).await;
+
+    response.assert_status(StatusCode::FORBIDDEN);
+}
+
+#[sqlx::test(fixtures("user", "note"))]
+async fn note_search_only_returns_own_notes(db: sqlx::Pool<sqlx::Sqlite>) {
+    let server = setup_server(db);
+
+    let token = test::login(&server).await; // Login as Alice (user 1)
+
+    // Search for tag3 which exists in Bob's notes but not Alice's
+    let response = server
+        .post("/note/search")
+        .authorization_bearer(token)
+        .json(&json!({
+            "tag": ["tag3"]
+        }))
+        .await;
+
+    response.assert_status_ok();
+
+    let json = response.json::<Vec<Note>>();
+
+    // Alice has no notes with tag3 (only Bob has tag3)
+    assert_eq!(0, json.len());
 }

@@ -91,10 +91,15 @@ pub async fn create(
     Ok(created)
 }
 
-pub async fn search(db: SqlitePool, params: NoteSearchRequest) -> Result<Vec<Note>, DbError> {
-    // Start with base query
-    let mut query = String::from("SELECT * FROM notes WHERE 1=1");
+pub async fn search(
+    db: SqlitePool,
+    user_id: i64,
+    params: NoteSearchRequest,
+) -> Result<Vec<Note>, DbError> {
+    // Start with base query - ALWAYS filter by user_id for security
+    let mut query = String::from("SELECT * FROM notes WHERE user_id = ?");
     let mut args = Vec::new();
+    args.push(user_id.to_string());
 
     // Build query conditionally based on params
     if let Some(term) = params.term {

@@ -30,6 +30,8 @@ pub enum ApplicationError {
 pub enum RestError {
     #[error("Resource not found")]
     NotFound,
+    #[error("Forbidden: You don't have permission to access this resource")]
+    Forbidden,
     #[error("Invalid input: {0}")]
     InvalidInput(String),
     #[error("Database error: {0}")]
@@ -81,6 +83,10 @@ impl IntoResponse for RestError {
             RestError::NotFound => (
                 StatusCode::NOT_FOUND,
                 Json(AppErrorDto::new(&self.to_string()).with_status(StatusCode::NOT_FOUND)),
+            ),
+            RestError::Forbidden => (
+                StatusCode::FORBIDDEN,
+                Json(AppErrorDto::new(&self.to_string()).with_status(StatusCode::FORBIDDEN)),
             ),
             RestError::InvalidInput(_) => (
                 StatusCode::BAD_REQUEST,
