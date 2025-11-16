@@ -3,6 +3,8 @@ use crate::{
     auth::AuthFlow,
     web_client::{self, Client},
 };
+use std::fs;
+use std::path::Path;
 
 pub async fn login_cmd(
     mut client: Box<dyn Client>,
@@ -17,12 +19,35 @@ pub async fn login_cmd(
     match token {
         Ok(token) => {
             println!("Api Key Path: {}", api_key_path);
-            std::fs::write(api_key_path, token)?;
+            save_token_securely(api_key_path, &token)?;
             println!("User successfully logged in.");
         }
         Err(e) => {
             eprintln!("Error: {}", e);
         }
+    }
+
+    Ok(())
+}
+
+fn save_token_securely(token_path: &str, token: &str) -> anyhow::Result<()> {
+    let path = Path::new(token_path);
+
+    // Ensure the directory exists
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+
+    // Write the token
+    fs::write(path, token)?;
+
+    // On Unix-like systems, set file permissions to 600 (owner read/write only)
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = fs::metadata(path)?.permissions();
+        perms.set_mode(0o600);
+        fs::set_permissions(path, perms)?;
     }
 
     Ok(())
