@@ -2,14 +2,14 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct User {
-    pub id: i64,
+    pub id: String,
     pub name: String,
     pub email: String,
 }
 
 #[derive(Debug)]
 pub struct UserEntity {
-    pub id: i64,
+    pub id: String,
     pub name: String,
     pub email: String,
     pub password: String,

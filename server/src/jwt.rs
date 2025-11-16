@@ -47,7 +47,7 @@ pub fn verify_password(password: &str, hashed_password: &str) -> bool {
     is_valid
 }
 
-pub fn create_token(user_id: i64, secret: &[u8]) -> Result<String, AuthError> {
+pub fn create_token(user_id: &str, secret: &[u8]) -> Result<String, AuthError> {
     let now = chrono::Utc::now();
     let iat = now.timestamp() as usize;
     let exp = (now + chrono::Duration::days(7)).timestamp() as usize;

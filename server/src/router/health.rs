@@ -2,20 +2,16 @@ use aide::{
     axum::{routing::get_with, ApiRouter, IntoApiResponse},
     transform::TransformOperation,
 };
-use axum::http::StatusCode;
+use axum::{http::StatusCode, response::IntoResponse, Extension};
 
-use crate::state::AppState;
-
-use super::with_auth_middleware;
+use crate::{errors::{AuthError, RestError}, model::user::User, state::AppState};
 
 fn health_routes_public() -> ApiRouter<AppState> {
     ApiRouter::new().api_route("/health/ping", get_with(ping, ping_docs))
 }
 
-fn health_routes_private(app_state: AppState) -> ApiRouter<AppState> {
-    let router = ApiRouter::new().api_route("/health/auth", get_with(auth_ping, auth_ping_docs));
-
-    with_auth_middleware(router, app_state)
+fn health_routes_private(_app_state: AppState) -> ApiRouter<AppState> {
+    ApiRouter::new().api_route("/health/auth", get_with(auth_ping, auth_ping_docs))
 }
 
 pub fn health_routes(app_state: AppState) -> ApiRouter<AppState> {
@@ -33,8 +29,12 @@ pub fn ping_docs(op: TransformOperation) -> TransformOperation {
         .response::<200, ()>() // Simple 200 OK response with no body
 }
 
-pub async fn auth_ping() -> impl IntoApiResponse {
-    StatusCode::OK
+pub async fn auth_ping(user_opt: Option<Extension<User>>) -> impl IntoApiResponse {
+    // Check authentication
+    match user_opt {
+        Some(_) => StatusCode::OK.into_response(),
+        None => RestError::Authorization(AuthError::TokenNotFound).into_response(),
+    }
 }
 
 pub fn auth_ping_docs(op: TransformOperation) -> TransformOperation {

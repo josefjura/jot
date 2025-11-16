@@ -1,7 +1,7 @@
 #![deny(clippy::expect_used, clippy::unwrap_used, clippy::panic)]
 #![warn(clippy::expect_used)]
 
-use db::create_db_pool;
+use db::open_auth_db;
 use dotenvy::dotenv;
 use errors::ApplicationError;
 use router::setup_router;
@@ -13,7 +13,6 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 mod db;
 mod errors;
 mod jwt;
-mod middleware;
 mod model;
 mod router;
 mod state;
@@ -36,11 +35,22 @@ async fn main() -> Result<(), ApplicationError> {
 async fn run() -> Result<(), ApplicationError> {
     setup_tracing();
 
-    let (host, port, jwt_secret, data_file) = setup_env()?;
+    let (host, port, jwt_secret, data_dir) = setup_env()?;
 
-    let db = setup_db(data_file).await?;
+    // Ensure data directories exist
+    std::fs::create_dir_all(&data_dir)
+        .map_err(|e| ApplicationError::Internal(format!("Failed to create data directory: {}", e)))?;
 
-    let app = setup_router(db, &jwt_secret);
+    let users_dir = data_dir.join("users");
+    std::fs::create_dir_all(&users_dir)
+        .map_err(|e| ApplicationError::Internal(format!("Failed to create users directory: {}", e)))?;
+
+    // Open auth database
+    let auth_db_path = data_dir.join("auth.db");
+    let auth_db = open_auth_db(&auth_db_path)
+        .map_err(|e| ApplicationError::Internal(format!("Failed to open auth database: {}", e)))?;
+
+    let app = setup_router(auth_db, &jwt_secret, data_dir);
 
     let address = format!("{}:{}", host, port);
     info!("Starting server on {}", address);
@@ -54,7 +64,7 @@ async fn run() -> Result<(), ApplicationError> {
         listener.local_addr().map_err(ApplicationError::from)?
     );
 
-    axum::serve(listener, app)
+    axum::serve(listener, app.into_make_service())
         .await
         .map_err(ApplicationError::CannotServe)?;
     Ok(())
@@ -75,14 +85,7 @@ fn setup_tracing() {
         .init();
 }
 
-async fn setup_db(data_file: String) -> Result<sqlx::Pool<sqlx::Sqlite>, ApplicationError> {
-    let db = create_db_pool(&data_file)
-        .await
-        .map_err(ApplicationError::from)?;
-    Ok(db)
-}
-
-fn setup_env() -> Result<(String, String, String, String), ApplicationError> {
+fn setup_env() -> Result<(String, String, String, std::path::PathBuf), ApplicationError> {
     dotenv().ok();
 
     let host = std::env::var("JOT_HOST")
@@ -91,7 +94,8 @@ fn setup_env() -> Result<(String, String, String, String), ApplicationError> {
         .map_err(|e| ApplicationError::EnvError(e, "JOT_PORT".to_string()))?;
     let jwt_secret = std::env::var("JOT_JWT_SECRET")
         .map_err(|e| ApplicationError::EnvError(e, "JOT_JWT_SECRET".to_string()))?;
-    let data_file = env::var("DATABASE_PATH")
-        .map_err(|e| ApplicationError::EnvError(e, "DATABASE_PATH".to_string()))?;
-    Ok((host, port, jwt_secret, data_file))
+    let data_dir = env::var("JOT_DATA_DIR")
+        .unwrap_or_else(|_| "./data".to_string());
+
+    Ok((host, port, jwt_secret, std::path::PathBuf::from(data_dir)))
 }
