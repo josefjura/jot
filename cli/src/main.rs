@@ -44,14 +44,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 client.ping().await?;
 
                 // Set profile_path variable to Some with the value of profile_path if it exists, otherwise set it to None
-                let profile_path = if profile_path.exists() {
-                    Some(profile_path.to_str().unwrap())
+                let profile_path_str = if profile_path.exists() {
+                    Some(
+                        profile_path
+                            .to_str()
+                            .ok_or_else(|| anyhow::anyhow!("Profile path contains invalid UTF-8"))?,
+                    )
                 } else {
                     None
                 };
 
                 match command {
-                    Command::Login => login_cmd(client, profile_path, &config.api_key_path).await?,
+                    Command::Login => login_cmd(client, profile_path_str, &config.api_key_path).await?,
                     Command::Note(subcommand) => note_cmd(client, subcommand).await?,
                     Command::Down(args) => note_cmd(client, args::NoteCommand::Add(args)).await?,
                     _ => unreachable!(),
