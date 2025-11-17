@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+jot-core = { workspace = true }
+rusqlite = { version = "0.32", features = ["bundled"] }
 clap = { version = "4.5.23", features = ["derive", "cargo", "env"] }
 config = { version = "0.14.1", features = ["toml"] }
 directories = "5.0.1"

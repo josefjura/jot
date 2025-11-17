@@ -24,11 +24,27 @@ pub struct GetNotesResponse {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Note {
-    pub id: Option<i64>,
+    pub id: String,
     pub content: String,
     pub tags: Vec<String>,
-    pub created_at: chrono::DateTime<chrono::Utc>,
-    pub updated_at: chrono::DateTime<chrono::Utc>,
+    pub date: Option<String>,
+    pub created_at: i64,
+    pub updated_at: i64,
+    pub deleted_at: Option<i64>,
+}
+
+impl From<jot_core::Note> for Note {
+    fn from(note: jot_core::Note) -> Self {
+        Note {
+            id: note.id,
+            content: note.content,
+            tags: note.tags,
+            date: note.date,
+            created_at: note.created_at,
+            updated_at: note.updated_at,
+            deleted_at: note.deleted_at,
+        }
+    }
 }
 
 #[derive(Serialize)]

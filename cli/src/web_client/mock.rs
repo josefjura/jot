@@ -1,5 +1,4 @@
 use async_trait::async_trait;
-use chrono::NaiveDate;
 
 use crate::{
     args::NoteSearchArgs,
@@ -35,14 +34,12 @@ impl Client for MockClient {
         &mut self,
         device_code: &str,
     ) -> anyhow::Result<crate::model::TokenPollResponse> {
-        self.response_counter = 0;
-
         println!(
             "Mocking polling for token with device code: {}",
             device_code
         );
 
-        if self.response_counter == 1 {
+        if self.response_counter >= 1 {
             return Ok(crate::model::TokenPollResponse::Success(
                 MOCK_TOKEN.to_string(),
             ));
@@ -57,7 +54,7 @@ impl Client for MockClient {
         &mut self,
         content: String,
         _tags: Vec<String>,
-        date: NaiveDate,
+        _date: chrono::NaiveDate,
     ) -> anyhow::Result<crate::model::CreateNoteResponse> {
         let note = crate::model::CreateNoteResponse { id: 1, content };
 
@@ -71,37 +68,43 @@ impl Client for MockClient {
     async fn get_notes(&mut self) -> anyhow::Result<GetNotesResponse> {
         let notes = vec![
             Note {
-                id: Some(1),
+                id: "1".to_string(),
                 tags: vec!["tag1".to_string(), "tag3".to_string()],
+                date: Some("2024-01-01".to_string()),
                 created_at: chrono::DateTime::parse_from_rfc3339("2024-01-01T10:00:00Z")
-                    .unwrap()
-                    .into(),
+                    .map_err(|e| anyhow::anyhow!("Failed to parse timestamp: {}", e))?
+                    .timestamp(),
                 updated_at: chrono::DateTime::parse_from_rfc3339("2024-01-01T10:00:00Z")
-                    .unwrap()
-                    .into(),
+                    .map_err(|e| anyhow::anyhow!("Failed to parse timestamp: {}", e))?
+                    .timestamp(),
+                deleted_at: None,
                 content: "Short note".to_string(),
             },
             Note {
-                id: Some(2),
+                id: "2".to_string(),
                 tags: vec!["tag2".to_string(), "tag3".to_string()],
+                date: Some("2024-01-02".to_string()),
                 created_at: chrono::DateTime::parse_from_rfc3339("2024-01-02T10:00:00Z")
-                    .unwrap()
-                    .into(),
+                    .map_err(|e| anyhow::anyhow!("Failed to parse timestamp: {}", e))?
+                    .timestamp(),
                 updated_at: chrono::DateTime::parse_from_rfc3339("2024-01-02T11:00:00Z")
-                    .unwrap()
-                    .into(),
+                    .map_err(|e| anyhow::anyhow!("Failed to parse timestamp: {}", e))?
+                    .timestamp(),
+                deleted_at: None,
                 content: "Multi-line note\nWith several\nDistinct lines\nTo test preview"
                     .to_string(),
             },
             Note {
-                id: Some(3),
+                id: "3".to_string(),
                 tags: vec!["tag3".to_string(), "tag4".to_string()],
+                date: Some("2024-01-03".to_string()),
                 created_at: chrono::DateTime::parse_from_rfc3339("2024-01-03T10:00:00Z")
-                    .unwrap()
-                    .into(),
+                    .map_err(|e| anyhow::anyhow!("Failed to parse timestamp: {}", e))?
+                    .timestamp(),
                 updated_at: chrono::DateTime::parse_from_rfc3339("2024-01-03T10:00:00Z")
-                    .unwrap()
-                    .into(),
+                    .map_err(|e| anyhow::anyhow!("Failed to parse timestamp: {}", e))?
+                    .timestamp(),
+                deleted_at: None,
                 content:
                     "Note with special formatting:\n* bullet point\n> quote\n```\ncode block\n```"
                         .to_string(),

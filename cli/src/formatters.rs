@@ -1,9 +1,14 @@
 use crate::{
     args::{NoteSearchArgs, OutputFormat},
-    model::Note,
 };
+use chrono::{DateTime, Utc};
+use jot_core::Note;
 use std::io::{self, Write};
 use termcolor::{BufferWriter, Color, ColorChoice, ColorSpec, WriteColor};
+
+fn timestamp_to_datetime(ts: i64) -> DateTime<Utc> {
+    DateTime::from_timestamp_millis(ts).unwrap_or_else(|| Utc::now())
+}
 
 pub struct NoteSearchFormatter {
     args: NoteSearchArgs,
@@ -72,14 +77,14 @@ impl NoteSearchFormatter {
                 .set_intense(false),
         )?;
 
-        writeln!(buffer, "\u{1F4CB} #{}", note.id.unwrap_or(0))?;
+        writeln!(buffer, "\u{1F4CB} {}", &note.id[..8])?; // Show first 8 chars of ULID
 
         write!(
             buffer,
             "\u{1F4C5} [{}]",
-            note.created_at.format("%Y-%m-%d %H:%M")
+            timestamp_to_datetime(note.created_at).format("%Y-%m-%d %H:%M")
         )?;
-        writeln!(buffer, "[{}]", note.updated_at.format("%Y-%m-%d %H:%M"))?;
+        writeln!(buffer, "[{}]", timestamp_to_datetime(note.updated_at).format("%Y-%m-%d %H:%M"))?;
 
         if !note.tags.is_empty() {
             write!(buffer, "\u{1F516}")?;
@@ -94,10 +99,10 @@ impl NoteSearchFormatter {
     fn print_metadata(&self, buffer: &mut termcolor::Buffer, note: &Note) -> io::Result<()> {
         let mut metadata = Vec::new();
 
-        metadata.push(format!("#{}", note.id.unwrap_or(0)));
+        metadata.push(format!("{}", &note.id[..8])); // Show first 8 chars of ULID
 
-        metadata.push(format!("[{}]", note.created_at.format("%Y-%m-%d %H:%M")));
-        metadata.push(format!("[{}]", note.updated_at.format("%Y-%m-%d %H:%M")));
+        metadata.push(format!("[{}]", timestamp_to_datetime(note.created_at).format("%Y-%m-%d %H:%M")));
+        metadata.push(format!("[{}]", timestamp_to_datetime(note.updated_at).format("%Y-%m-%d %H:%M")));
 
         if !note.tags.is_empty() {
             metadata.push(format!(" [{}]", note.tags.join(",")));

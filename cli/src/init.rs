@@ -7,6 +7,7 @@ pub fn read_profile(defaults: &AppConfig) -> anyhow::Result<Profile> {
     let profile = Profile {
         server_url: Some(read_server_url(&defaults.server_url)?),
         api_key_path: Some(read_api_key_path(&defaults.api_key_path)?),
+        db_path: Some(read_db_path(&defaults.db_path)?),
     };
 
     Ok(profile)
@@ -27,5 +28,14 @@ fn read_api_key_path(default: &str) -> anyhow::Result<String> {
         .default_input(default)
         .required(true)
         .interact()
-        .context("Couldn't read server URL")
+        .context("Couldn't read API key path")
+}
+
+fn read_db_path(default: &str) -> anyhow::Result<String> {
+    input("Local database path")
+        .placeholder(default)
+        .default_input(default)
+        .required(true)
+        .interact()
+        .context("Couldn't read database path")
 }

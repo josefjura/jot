@@ -1,7 +1,6 @@
 use crate::{
-    app_config::AppConfig,
     auth::AuthFlow,
-    web_client::{self, Client},
+    web_client::Client,
 };
 use std::fs;
 use std::path::Path;

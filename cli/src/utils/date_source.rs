@@ -38,9 +38,11 @@ impl<'de> Deserialize<'de> for DateSource {
             "today" => Ok(DateSource::Today),
             "yesterday" => Ok(DateSource::Yesterday),
             "tomorrow" => Ok(DateSource::Tomorrow),
-            date => Ok(DateSource::Specific(
-                NaiveDate::parse_from_str(date, "%Y-%m-%d").unwrap(),
-            )),
+            date => {
+                let parsed_date = NaiveDate::parse_from_str(date, "%Y-%m-%d")
+                    .map_err(serde::de::Error::custom)?;
+                Ok(DateSource::Specific(parsed_date))
+            }
         }
     }
 }

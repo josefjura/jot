@@ -5,6 +5,7 @@ use serde::Serialize;
 use crate::{args::ConfigArgs, profile::Profile};
 
 pub const DEFAULT_API_KEY_FILENAME: &str = "api_key";
+pub const DEFAULT_DB_FILENAME: &str = "notes.db";
 
 #[derive(Debug, Serialize)]
 pub struct AppConfig {
@@ -15,6 +16,7 @@ pub struct AppConfig {
     pub server_url: String,
     pub profile_path: String,
     pub api_key_path: String,
+    pub db_path: String,
     pub profile_exists: bool,
     pub token: Option<String>,
 }
@@ -28,6 +30,7 @@ impl Default for AppConfig {
             server_url: "http://localhost:9000".to_string(),
             profile_path: "./".to_string(),
             api_key_path: format!("./{}", DEFAULT_API_KEY_FILENAME),
+            db_path: format!("./{}", DEFAULT_DB_FILENAME),
             profile_exists: false,
             token: None,
         }
@@ -43,7 +46,13 @@ impl AppConfig {
             .and_then(|p| p.api_key_path.as_ref())
             .cloned()
             .or(build_api_key_path(profile_path))
-            .unwrap_or(defaults.api_key_path);
+            .unwrap_or(defaults.api_key_path.clone());
+
+        let db_path = profile
+            .and_then(|p| p.db_path.as_ref())
+            .cloned()
+            .or(build_db_path(profile_path))
+            .unwrap_or(defaults.db_path);
 
         let token = std::fs::read_to_string(&api_key_path).ok();
 
@@ -62,6 +71,7 @@ impl AppConfig {
                 .or(profile_server_url.cloned())
                 .unwrap_or(defaults.server_url),
             api_key_path,
+            db_path,
             token,
         };
 
@@ -87,5 +97,12 @@ fn build_api_key_path(profile_path: &Path) -> Option<String> {
     profile_path
         .parent()
         .map(|p| p.join(Path::new(DEFAULT_API_KEY_FILENAME)))
+        .map(|p| p.to_string_lossy().into_owned())
+}
+
+fn build_db_path(profile_path: &Path) -> Option<String> {
+    profile_path
+        .parent()
+        .map(|p| p.join(Path::new(DEFAULT_DB_FILENAME)))
         .map(|p| p.to_string_lossy().into_owned())
 }
