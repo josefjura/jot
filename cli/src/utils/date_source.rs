@@ -78,6 +78,8 @@ impl DateSource {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used, clippy::panic)]
+
     use chrono::Datelike;
 
     use super::*;

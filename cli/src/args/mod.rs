@@ -20,29 +20,13 @@ pub struct CliArgs {
 
 #[derive(Debug, Args, Serialize)]
 pub struct ConfigArgs {
-    /// Mock server requests
-    #[cfg(debug_assertions)]
-    #[arg(long, short, default_value_t = false)]
-    pub mock: bool,
-
-    /// Parameter for mock specification
-    #[cfg(debug_assertions)]
-    #[arg(long)]
-    pub mock_param: Option<String>,
-
-    /// Mock server requests
+    /// Path to profile configuration file
     #[arg(long, short, env = "JOT_PROFILE")]
     pub profile_path: Option<String>,
-
-    /// Mock server requests
-    #[arg(long, short)]
-    pub server_url: Option<String>,
 }
 
 #[derive(Debug, Subcommand, Serialize, PartialEq)]
 pub enum Command {
-    /// Authenticates user against server
-    Login,
     /// Prints out curent configuration
     Config,
     /// Initializes a new profile
@@ -54,11 +38,6 @@ pub enum Command {
     Down(NoteAddArgs),
 }
 
-pub enum CommandGroup {
-    WithClient(Command),
-    WithoutClient(Command),
-}
-
 #[derive(Debug, Subcommand, Serialize, PartialEq)]
 pub enum NoteCommand {
     /// Creates a new note.
@@ -67,6 +46,10 @@ pub enum NoteCommand {
     Search(NoteSearchArgs),
     /// Get latest note.
     Last(NoteLatestArgs),
+    /// Edit a note.
+    Edit(NoteEditArgs),
+    /// Delete a note (soft delete).
+    Delete(NoteDeleteArgs),
 }
 
 #[derive(Debug, Args, Serialize, PartialEq)]
@@ -161,4 +144,22 @@ pub fn parse_date_target(s: &str) -> anyhow::Result<DateTarget> {
 
 pub fn parse_date_source(s: &str) -> anyhow::Result<DateSource> {
     return s.parse();
+}
+
+#[derive(Debug, Args, Serialize, PartialEq)]
+pub struct NoteEditArgs {
+    /// Note ID to edit (if not provided, edits the most recent note)
+    #[arg(value_name = "ID")]
+    pub id: Option<String>,
+}
+
+#[derive(Debug, Args, Serialize, PartialEq)]
+pub struct NoteDeleteArgs {
+    /// Note ID(s) to delete (if not provided, deletes the most recent note)
+    #[arg(value_name = "ID")]
+    pub ids: Vec<String>,
+
+    /// Skip confirmation prompt
+    #[arg(long, short = 'y')]
+    pub yes: bool,
 }

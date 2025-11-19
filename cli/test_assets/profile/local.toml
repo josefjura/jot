@@ -1,1 +1,1 @@
-server_url = "http://localhost:9000"
+db_path = "./notes.db"

@@ -10,8 +10,6 @@ const DEFAULT_PROFILE_FILENAME: &str = "default.toml";
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Profile {
-    pub server_url: Option<String>,
-    pub api_key_path: Option<String>,
     pub db_path: Option<String>,
 }
 
@@ -20,8 +18,6 @@ impl Default for Profile {
         let c = AppConfig::default();
 
         Profile {
-            server_url: Some(c.server_url),
-            api_key_path: Some(c.api_key_path),
             db_path: Some(c.db_path),
         }
     }

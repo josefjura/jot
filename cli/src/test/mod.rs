@@ -1,14 +1,14 @@
-use std::path::Path;
+#![allow(clippy::unwrap_used)]
 
 use assert_cmd::Command;
 use predicates::prelude::{
     predicate::str::{contains, is_empty},
     PredicateBooleanExt,
 };
-use tempfile::TempDir;
 
 pub mod asserts;
 mod e2e;
+mod note_operations;
 pub mod test_context;
 
 #[test]
@@ -25,7 +25,7 @@ fn test_profile_arg() {
         .success()
         .stdout(
             contains(r#""profile_path": "test_assets/profile/default.toml""#)
-                .and(contains(r#""server_url": "asset_toml_server_url""#)),
+                .and(contains(r#""db_path""#)),
         )
         .stderr(is_empty());
 }
@@ -43,7 +43,7 @@ fn test_profile_env() {
         .success()
         .stdout(
             contains(r#""profile_path": "test_assets/profile/default.toml""#)
-                .and(contains(r#""server_url": "asset_toml_server_url""#)),
+                .and(contains(r#""db_path""#)),
         )
         .stderr(is_empty());
 }

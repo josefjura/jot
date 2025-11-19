@@ -34,6 +34,30 @@ impl LocalDb {
             .context("Failed to search notes")
     }
 
+    /// Get a note by ID
+    pub fn get_note_by_id(&self, id: &str) -> Result<Option<Note>> {
+        jot_core::get_note_by_id(&self.conn, id)
+            .context("Failed to get note by ID")
+    }
+
+    /// Update an existing note
+    pub fn update_note(
+        &self,
+        id: &str,
+        content: String,
+        tags: Vec<String>,
+        date: Option<String>,
+    ) -> Result<()> {
+        jot_core::update_note(&self.conn, id, &content, tags, date)
+            .context("Failed to update note")
+    }
+
+    /// Soft delete a note
+    pub fn soft_delete_note(&self, id: &str) -> Result<()> {
+        jot_core::soft_delete_note(&self.conn, id)
+            .context("Failed to soft delete note")
+    }
+
     /// Get all notes modified since a timestamp (for sync)
     pub fn get_notes_since(&self, timestamp: i64) -> Result<Vec<Note>> {
         jot_core::get_notes_since(&self.conn, timestamp)
