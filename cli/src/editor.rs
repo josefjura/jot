@@ -91,7 +91,8 @@ impl Editor {
         let mut current_content = self.template.to_string();
 
         loop {
-            let edited_content = self.with_initial_content(&current_content, &args.content.join(" "))?;
+            let edited_content =
+                self.with_initial_content(&current_content, &args.content.join(" "))?;
 
             match edited_content.parse_template() {
                 Ok(parsed) => {
@@ -257,9 +258,7 @@ impl ParseTemplate for String {
         let lines: Vec<&str> = self.lines().collect();
 
         // Find the first line that is just +++ (with optional whitespace)
-        let delimiter_pos = lines
-            .iter()
-            .position(|line| line.trim() == "+++");
+        let delimiter_pos = lines.iter().position(|line| line.trim() == "+++");
 
         let (toml_lines, content_lines) = match delimiter_pos {
             Some(pos) => {
@@ -419,7 +418,9 @@ date = "today""#
     #[test]
     fn test_format_error_header_escapes_special_chars() {
         // Simulate a TOML error with pipe symbols and special characters
-        let error = anyhow::anyhow!("TOML parse error at line 2, column 3\n  |\n2 |   |\n  |   ^\ninvalid key");
+        let error = anyhow::anyhow!(
+            "TOML parse error at line 2, column 3\n  |\n2 |   |\n  |   ^\ninvalid key"
+        );
         let original_content = r#"tags = ["work"
 date = "today"
 +++
@@ -430,7 +431,7 @@ My content"#;
         // Verify all error lines start with "# "
         let lines: Vec<&str> = formatted.lines().collect();
         assert!(lines[0].starts_with("# ====="));
-        assert!(lines[1].starts_with("# "));  // Error message line
+        assert!(lines[1].starts_with("# ")); // Error message line
 
         // Verify original content is preserved after the error block
         assert!(formatted.contains("My content"));

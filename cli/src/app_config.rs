@@ -2,7 +2,10 @@ use std::path::Path;
 
 use serde::Serialize;
 
-use crate::{args::ConfigArgs, profile::{self, Profile}};
+use crate::{
+    args::ConfigArgs,
+    profile::{self, Profile},
+};
 
 #[derive(Debug, Serialize)]
 pub struct AppConfig {
@@ -14,7 +17,12 @@ pub struct AppConfig {
 }
 
 impl AppConfig {
-    pub fn from_args(_args: ConfigArgs, profile_path: &Path, profile: Option<&Profile>, profile_name: &str) -> Self {
+    pub fn from_args(
+        _args: ConfigArgs,
+        profile_path: &Path,
+        profile: Option<&Profile>,
+        profile_name: &str,
+    ) -> Self {
         // Get DB path: profile config > computed path for profile name
         let db_path = profile
             .and_then(|p| p.db_path.as_ref())
@@ -25,9 +33,7 @@ impl AppConfig {
                     .to_string()
             });
 
-        let default_tags = profile
-            .map(|p| p.default_tags.clone())
-            .unwrap_or_default();
+        let default_tags = profile.map(|p| p.default_tags.clone()).unwrap_or_default();
 
         AppConfig {
             profile_name: profile_name.to_string(),

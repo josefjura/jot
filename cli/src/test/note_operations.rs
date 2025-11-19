@@ -2,8 +2,8 @@
 
 use assert_cmd::Command;
 use predicates::prelude::*;
-use tempfile::TempDir;
 use std::path::PathBuf;
+use tempfile::TempDir;
 
 /// Helper to create a test database and return paths
 struct TestDb {
@@ -97,7 +97,14 @@ fn test_note_add_with_tags() {
     let db = TestDb::new();
 
     db.cmd()
-        .args(&["note", "add", "--tag", "work,urgent", "important", "meeting"])
+        .args(&[
+            "note",
+            "add",
+            "--tag",
+            "work,urgent",
+            "important",
+            "meeting",
+        ])
         .assert()
         .success();
 
@@ -125,10 +132,7 @@ fn test_note_add_with_date() {
 fn test_down_alias() {
     let db = TestDb::new();
 
-    db.cmd()
-        .args(&["down", "quick", "note"])
-        .assert()
-        .success();
+    db.cmd().args(&["down", "quick", "note"]).assert().success();
 
     let notes = db.get_notes();
     assert_eq!(notes.len(), 1);
@@ -140,9 +144,18 @@ fn test_note_search_all() {
     let db = TestDb::new();
 
     // Add multiple notes
-    db.cmd().args(&["note", "add", "first", "note"]).assert().success();
-    db.cmd().args(&["note", "add", "second", "note"]).assert().success();
-    db.cmd().args(&["note", "add", "third", "note"]).assert().success();
+    db.cmd()
+        .args(&["note", "add", "first", "note"])
+        .assert()
+        .success();
+    db.cmd()
+        .args(&["note", "add", "second", "note"])
+        .assert()
+        .success();
+    db.cmd()
+        .args(&["note", "add", "third", "note"])
+        .assert()
+        .success();
 
     // Search all
     db.cmd()
@@ -158,8 +171,14 @@ fn test_note_search_all() {
 fn test_note_search_by_term() {
     let db = TestDb::new();
 
-    db.cmd().args(&["note", "add", "meeting", "notes"]).assert().success();
-    db.cmd().args(&["note", "add", "random", "thoughts"]).assert().success();
+    db.cmd()
+        .args(&["note", "add", "meeting", "notes"])
+        .assert()
+        .success();
+    db.cmd()
+        .args(&["note", "add", "random", "thoughts"])
+        .assert()
+        .success();
 
     // Search for "meeting"
     db.cmd()
@@ -174,8 +193,14 @@ fn test_note_search_by_term() {
 fn test_note_search_by_tag() {
     let db = TestDb::new();
 
-    db.cmd().args(&["note", "add", "--tag", "work", "work", "stuff"]).assert().success();
-    db.cmd().args(&["note", "add", "--tag", "personal", "home", "stuff"]).assert().success();
+    db.cmd()
+        .args(&["note", "add", "--tag", "work", "work", "stuff"])
+        .assert()
+        .success();
+    db.cmd()
+        .args(&["note", "add", "--tag", "personal", "home", "stuff"])
+        .assert()
+        .success();
 
     // Search by tag
     db.cmd()
@@ -192,7 +217,10 @@ fn test_note_search_with_limit() {
 
     // Add 5 notes
     for i in 1..=5 {
-        db.cmd().args(&["note", "add", &format!("note {}", i)]).assert().success();
+        db.cmd()
+            .args(&["note", "add", &format!("note {}", i)])
+            .assert()
+            .success();
     }
 
     // Search with limit 2
@@ -203,7 +231,8 @@ fn test_note_search_with_limit() {
 
     // We can't easily count the output, but we can verify it succeeds
     // and contains at least one note
-    let output = db.cmd()
+    let output = db
+        .cmd()
         .args(&["note", "search", "--limit", "2", "--output", "json"])
         .output()
         .unwrap();
@@ -217,9 +246,18 @@ fn test_note_search_with_limit() {
 fn test_note_last() {
     let db = TestDb::new();
 
-    db.cmd().args(&["note", "add", "first", "note"]).assert().success();
-    db.cmd().args(&["note", "add", "second", "note"]).assert().success();
-    db.cmd().args(&["note", "add", "latest", "note"]).assert().success();
+    db.cmd()
+        .args(&["note", "add", "first", "note"])
+        .assert()
+        .success();
+    db.cmd()
+        .args(&["note", "add", "second", "note"])
+        .assert()
+        .success();
+    db.cmd()
+        .args(&["note", "add", "latest", "note"])
+        .assert()
+        .success();
 
     // Get last note
     db.cmd()
@@ -233,8 +271,14 @@ fn test_note_last() {
 fn test_note_delete_latest() {
     let db = TestDb::new();
 
-    db.cmd().args(&["note", "add", "first", "note"]).assert().success();
-    db.cmd().args(&["note", "add", "second", "note"]).assert().success();
+    db.cmd()
+        .args(&["note", "add", "first", "note"])
+        .assert()
+        .success();
+    db.cmd()
+        .args(&["note", "add", "second", "note"])
+        .assert()
+        .success();
 
     assert_eq!(db.get_notes().len(), 2);
 
@@ -254,8 +298,14 @@ fn test_note_delete_latest() {
 fn test_note_delete_by_id() {
     let db = TestDb::new();
 
-    db.cmd().args(&["note", "add", "first", "note"]).assert().success();
-    db.cmd().args(&["note", "add", "second", "note"]).assert().success();
+    db.cmd()
+        .args(&["note", "add", "first", "note"])
+        .assert()
+        .success();
+    db.cmd()
+        .args(&["note", "add", "second", "note"])
+        .assert()
+        .success();
 
     let notes = db.get_notes();
     // Notes are returned newest first (descending order by updated_at)
@@ -313,9 +363,13 @@ fn test_note_delete_nonexistent() {
 fn test_note_search_json_output() {
     let db = TestDb::new();
 
-    db.cmd().args(&["note", "add", "--tag", "test", "test", "note"]).assert().success();
+    db.cmd()
+        .args(&["note", "add", "--tag", "test", "test", "note"])
+        .assert()
+        .success();
 
-    let output = db.cmd()
+    let output = db
+        .cmd()
         .args(&["note", "search", "--output", "json"])
         .output()
         .unwrap();

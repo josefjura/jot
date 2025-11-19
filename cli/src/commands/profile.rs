@@ -25,8 +25,8 @@ pub fn profile_cmd(subcommand: Option<ProfileCommand>) -> Result<(), anyhow::Err
         }
         ProfileCommand::List => {
             let profiles = profile::list_profiles()?;
-            let current = profile::get_current_profile_name()
-                .unwrap_or_else(|_| "default".to_string());
+            let current =
+                profile::get_current_profile_name().unwrap_or_else(|_| "default".to_string());
 
             println!("Available profiles:");
             for profile_name in profiles {

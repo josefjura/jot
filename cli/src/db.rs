@@ -30,20 +30,20 @@ impl LocalDb {
         tags: Vec<String>,
         date: Option<String>,
     ) -> Result<Note> {
-        jot_core::create_note(&self.conn, &content, tags, date)
-            .context("Failed to create note")
+        jot_core::create_note(&self.conn, &content, tags, date).context("Failed to create note")
     }
 
     /// Search for notes
     pub fn search_notes(&self, query: &SearchQuery) -> Result<Vec<Note>> {
-        jot_core::search_notes(&self.conn, query)
-            .context("Failed to search notes")
+        jot_core::search_notes(&self.conn, query).context("Failed to search notes")
     }
 
     /// Get a note by ID (supports partial IDs - finds notes starting with the given prefix)
     pub fn get_note_by_id(&self, id: &str) -> Result<Option<Note>> {
         // First try exact match
-        if let Some(note) = jot_core::get_note_by_id(&self.conn, id).context("Failed to get note by ID")? {
+        if let Some(note) =
+            jot_core::get_note_by_id(&self.conn, id).context("Failed to get note by ID")?
+        {
             return Ok(Some(note));
         }
 
@@ -56,10 +56,11 @@ impl LocalDb {
             include_deleted: false,
             limit: None,
         };
-        let all_notes = jot_core::search_notes(&self.conn, &query)
-            .context("Failed to search notes")?;
+        let all_notes =
+            jot_core::search_notes(&self.conn, &query).context("Failed to search notes")?;
 
-        let matches: Vec<Note> = all_notes.into_iter()
+        let matches: Vec<Note> = all_notes
+            .into_iter()
             .filter(|note| note.id.starts_with(id))
             .collect();
 
@@ -82,14 +83,12 @@ impl LocalDb {
         tags: Vec<String>,
         date: Option<String>,
     ) -> Result<()> {
-        jot_core::update_note(&self.conn, id, &content, tags, date)
-            .context("Failed to update note")
+        jot_core::update_note(&self.conn, id, &content, tags, date).context("Failed to update note")
     }
 
     /// Soft delete a note
     pub fn soft_delete_note(&self, id: &str) -> Result<()> {
-        jot_core::soft_delete_note(&self.conn, id)
-            .context("Failed to soft delete note")
+        jot_core::soft_delete_note(&self.conn, id).context("Failed to soft delete note")
     }
 
     /// Get all notes modified since a timestamp (for sync)
@@ -102,8 +101,7 @@ impl LocalDb {
     /// Update or insert a note (for sync)
     #[allow(dead_code)]
     pub fn upsert_note(&self, note: &Note) -> Result<()> {
-        jot_core::upsert_note(&self.conn, note)
-            .context("Failed to upsert note")
+        jot_core::upsert_note(&self.conn, note).context("Failed to upsert note")
     }
 
     /// Get the last sync timestamp

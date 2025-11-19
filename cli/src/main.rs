@@ -33,7 +33,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     if let Some(command) = args.command {
         let profile = Profile::from_path(&profile_path)?;
-        let config = AppConfig::from_args(args.config, &profile_path, profile.as_ref(), &profile_name);
+        let config =
+            AppConfig::from_args(args.config, &profile_path, profile.as_ref(), &profile_name);
 
         match command {
             Command::Config => config_cmd(config)?,

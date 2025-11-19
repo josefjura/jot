@@ -1,6 +1,4 @@
-use crate::{
-    args::{NoteSearchArgs, OutputFormat},
-};
+use crate::args::{NoteSearchArgs, OutputFormat};
 use jot_core::Note;
 use std::io::{self, Write};
 use termcolor::{BufferWriter, Color, ColorChoice, ColorSpec, WriteColor};
@@ -42,7 +40,11 @@ impl NoteSearchFormatter {
                     writeln!(buffer, "No notes found")?;
                 } else {
                     for note in notes {
-                        self.print_note(&mut buffer, note, self.args.output == OutputFormat::Pretty)?;
+                        self.print_note(
+                            &mut buffer,
+                            note,
+                            self.args.output == OutputFormat::Pretty,
+                        )?;
                     }
                 }
             }

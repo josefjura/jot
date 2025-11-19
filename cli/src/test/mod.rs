@@ -24,10 +24,7 @@ fn test_profile_arg() {
 
     assert
         .success()
-        .stdout(
-            contains(r#""profile_name": "test_profile_arg""#)
-                .and(contains(r#""db_path""#)),
-        )
+        .stdout(contains(r#""profile_name": "test_profile_arg""#).and(contains(r#""db_path""#)))
         .stderr(is_empty());
 }
 
@@ -43,9 +40,6 @@ fn test_profile_env() {
 
     assert
         .success()
-        .stdout(
-            contains(r#""profile_name": "test_profile_env""#)
-                .and(contains(r#""db_path""#)),
-        )
+        .stdout(contains(r#""profile_name": "test_profile_env""#).and(contains(r#""db_path""#)))
         .stderr(is_empty());
 }

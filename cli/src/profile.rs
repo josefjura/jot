@@ -25,11 +25,9 @@ impl Profile {
             return Ok(None);
         }
 
-        let contents = std::fs::read_to_string(profile)
-            .context("Failed to read profile file")?;
+        let contents = std::fs::read_to_string(profile).context("Failed to read profile file")?;
 
-        let profile: Self = toml::from_str(&contents)
-            .context("Failed to deserialize profile")?;
+        let profile: Self = toml::from_str(&contents).context("Failed to deserialize profile")?;
 
         Ok(Some(profile))
     }
@@ -48,8 +46,8 @@ pub fn get_current_profile_name() -> anyhow::Result<String> {
     let current_file = get_current_profile_file();
 
     if current_file.exists() {
-        let name = std::fs::read_to_string(&current_file)
-            .context("Failed to read current profile")?;
+        let name =
+            std::fs::read_to_string(&current_file).context("Failed to read current profile")?;
         Ok(name.trim().to_string())
     } else {
         Ok("default".to_string())
@@ -61,12 +59,10 @@ pub fn set_current_profile_name(name: &str) -> anyhow::Result<()> {
     let current_file = get_current_profile_file();
 
     if let Some(parent) = current_file.parent() {
-        std::fs::create_dir_all(parent)
-            .context("Failed to create config directory")?;
+        std::fs::create_dir_all(parent).context("Failed to create config directory")?;
     }
 
-    std::fs::write(&current_file, name)
-        .context("Failed to write current profile")?;
+    std::fs::write(&current_file, name).context("Failed to write current profile")?;
 
     Ok(())
 }
@@ -102,12 +98,17 @@ fn get_current_profile_file() -> PathBuf {
 
 /// Get path to a profile's config file
 pub fn get_profile_config_path(profile_name: &str) -> PathBuf {
-    get_config_dir().join("profiles").join(format!("{}.toml", profile_name))
+    get_config_dir()
+        .join("profiles")
+        .join(format!("{}.toml", profile_name))
 }
 
 /// Get path to a profile's database
 pub fn get_profile_db_path(profile_name: &str) -> PathBuf {
-    get_data_dir().join("profiles").join(profile_name).join("notes.db")
+    get_data_dir()
+        .join("profiles")
+        .join(profile_name)
+        .join("notes.db")
 }
 
 /// List all available profiles
