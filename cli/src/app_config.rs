@@ -15,12 +15,22 @@ pub struct AppConfig {
 
 impl Default for AppConfig {
     fn default() -> Self {
+        let db_path = get_default_db_path()
+            .unwrap_or_else(|| format!("./{}", DEFAULT_DB_FILENAME));
+
         AppConfig {
             profile_path: "./".to_string(),
-            db_path: format!("./{}", DEFAULT_DB_FILENAME),
+            db_path,
             profile_exists: false,
         }
     }
+}
+
+/// Get default database path using XDG data directory
+fn get_default_db_path() -> Option<String> {
+    directories::ProjectDirs::from("com", "beardo", "jot")
+        .map(|dirs| dirs.data_dir().join(DEFAULT_DB_FILENAME))
+        .and_then(|path| path.to_str().map(|s| s.to_string()))
 }
 
 impl AppConfig {
@@ -30,7 +40,6 @@ impl AppConfig {
         let db_path = profile
             .and_then(|p| p.db_path.as_ref())
             .cloned()
-            .or(build_db_path(profile_path))
             .unwrap_or(defaults.db_path);
 
         AppConfig {
@@ -42,11 +51,4 @@ impl AppConfig {
             db_path,
         }
     }
-}
-
-fn build_db_path(profile_path: &Path) -> Option<String> {
-    profile_path
-        .parent()
-        .map(|p| p.join(Path::new(DEFAULT_DB_FILENAME)))
-        .map(|p| p.to_string_lossy().into_owned())
 }

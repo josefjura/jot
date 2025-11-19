@@ -5,7 +5,7 @@ use jot_core::SearchQuery;
 use crate::{
     args::{NoteCommand, NoteSearchArgs},
     db::LocalDb,
-    editor::{Editor, ParseTemplate},
+    editor::Editor,
     formatters::NoteSearchFormatter,
 };
 

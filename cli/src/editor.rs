@@ -21,6 +21,7 @@ pub struct EditorTemplate {
 }
 
 impl EditorTemplate {
+    #[allow(dead_code)]
     pub fn new() -> Self {
         EditorTemplate {
             tags: HashSet::new(),

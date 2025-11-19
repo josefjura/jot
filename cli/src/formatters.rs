@@ -1,14 +1,9 @@
 use crate::{
     args::{NoteSearchArgs, OutputFormat},
 };
-use chrono::{DateTime, Utc};
 use jot_core::Note;
 use std::io::{self, Write};
 use termcolor::{BufferWriter, Color, ColorChoice, ColorSpec, WriteColor};
-
-fn timestamp_to_datetime(ts: i64) -> DateTime<Utc> {
-    DateTime::from_timestamp_millis(ts).unwrap_or_else(|| Utc::now())
-}
 
 pub struct NoteSearchFormatter {
     args: NoteSearchArgs,
@@ -79,12 +74,10 @@ impl NoteSearchFormatter {
 
         writeln!(buffer, "\u{1F4CB} {}", &note.id[..8])?; // Show first 8 chars of ULID
 
-        write!(
-            buffer,
-            "\u{1F4C5} [{}]",
-            timestamp_to_datetime(note.created_at).format("%Y-%m-%d %H:%M")
-        )?;
-        writeln!(buffer, "[{}]", timestamp_to_datetime(note.updated_at).format("%Y-%m-%d %H:%M"))?;
+        // Show note date if present
+        if let Some(ref date) = note.date {
+            writeln!(buffer, "\u{1F4C5} {}", date)?;
+        }
 
         if !note.tags.is_empty() {
             write!(buffer, "\u{1F516}")?;
@@ -101,11 +94,13 @@ impl NoteSearchFormatter {
 
         metadata.push(format!("{}", &note.id[..8])); // Show first 8 chars of ULID
 
-        metadata.push(format!("[{}]", timestamp_to_datetime(note.created_at).format("%Y-%m-%d %H:%M")));
-        metadata.push(format!("[{}]", timestamp_to_datetime(note.updated_at).format("%Y-%m-%d %H:%M")));
+        // Show note date if present
+        if let Some(ref date) = note.date {
+            metadata.push(format!("[{}]", date));
+        }
 
         if !note.tags.is_empty() {
-            metadata.push(format!(" [{}]", note.tags.join(",")));
+            metadata.push(format!("[{}]", note.tags.join(",")));
         }
 
         write!(buffer, "{} ", metadata.join(" "))?;
