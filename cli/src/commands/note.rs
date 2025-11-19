@@ -22,7 +22,7 @@ pub fn note_cmd(
 
     match subcommand {
         NoteCommand::Add(args) => {
-            let note = if args.edit {
+            let note = if args.interactive {
                 let editor = Editor::new(TEMPLATE);
                 let result = editor.open(&args)?;
 
@@ -101,10 +101,9 @@ pub fn note_cmd(
                 tags_str, date_str, note.content
             );
 
-            // Open in editor
+            // Open in editor with error recovery
             let editor = Editor::new(&template);
-            let edited_content = editor.with_initial_content(&template, "")?;
-            let parsed = edited_content.parse_template()?;
+            let parsed = editor.open_with_recovery(&template)?;
 
             // Update the note
             let tags = parsed.tags.iter().map(|t| t.to_string()).collect();
@@ -176,11 +175,23 @@ pub fn note_cmd(
 }
 
 fn build_search_query(args: &NoteSearchArgs) -> SearchQuery {
+    let (date_from, date_to) = args
+        .date
+        .as_ref()
+        .map(|d| {
+            let (from, to) = d.to_date_range();
+            (
+                from.map(|d| d.format("%Y-%m-%d").to_string()),
+                to.map(|d| d.format("%Y-%m-%d").to_string()),
+            )
+        })
+        .unwrap_or((None, None));
+
     SearchQuery {
         text: args.term.clone(),
         tags: args.tag.clone(),
-        date_from: None, // TODO: Implement date filtering
-        date_to: None,
+        date_from,
+        date_to,
         include_deleted: false,
         limit: args.limit.map(|l| l as usize),
     }

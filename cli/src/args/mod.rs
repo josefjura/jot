@@ -60,9 +60,9 @@ pub struct NoteAddArgs {
     /// Note content
     #[arg(trailing_var_arg = true)]
     pub content: Vec<String>,
-    /// Open in external editor
+    /// Open in external editor for interactive editing
     #[arg(long, short, default_value_t = false)]
-    pub edit: bool,
+    pub interactive: bool,
     /// Filter by tags (can be specified multiple times or comma-separated)
     #[arg(long, value_name = "TAGS", value_delimiter = ',')]
     pub tag: Vec<String>,

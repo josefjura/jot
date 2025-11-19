@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use chrono::NaiveDate;
+use chrono::{Days, Local, NaiveDate};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
@@ -15,6 +15,50 @@ pub enum DateTarget {
     NextWeek,
     NextMonth,
     Specific(NaiveDate),
+}
+
+impl DateTarget {
+    /// Convert DateTarget to a date range (from, to).
+    /// Returns (None, None) for All, (Some, None) for Past/Future, (Some, Some) for specific ranges.
+    pub fn to_date_range(&self) -> (Option<NaiveDate>, Option<NaiveDate>) {
+        let today = Local::now().date_naive();
+
+        match self {
+            DateTarget::All => (None, None),
+            DateTarget::Past => (None, Some(today.pred_opt().unwrap_or(today))),
+            DateTarget::Future => (Some(today.succ_opt().unwrap_or(today)), None),
+            DateTarget::Today => (Some(today), Some(today)),
+            DateTarget::Yesterday => {
+                let yesterday = today.pred_opt().unwrap_or(today);
+                (Some(yesterday), Some(yesterday))
+            }
+            DateTarget::LastWeek => {
+                // Last week = 7 days ago to yesterday (inclusive)
+                let end = today.pred_opt().unwrap_or(today);
+                let start = today.checked_sub_days(Days::new(7)).unwrap_or(today);
+                (Some(start), Some(end))
+            }
+            DateTarget::LastMonth => {
+                // Last month = 30 days ago to yesterday (inclusive)
+                let end = today.pred_opt().unwrap_or(today);
+                let start = today.checked_sub_days(Days::new(30)).unwrap_or(today);
+                (Some(start), Some(end))
+            }
+            DateTarget::NextWeek => {
+                // Next week = tomorrow to 7 days from now (inclusive)
+                let start = today.succ_opt().unwrap_or(today);
+                let end = today.checked_add_days(Days::new(7)).unwrap_or(today);
+                (Some(start), Some(end))
+            }
+            DateTarget::NextMonth => {
+                // Next month = tomorrow to 30 days from now (inclusive)
+                let start = today.succ_opt().unwrap_or(today);
+                let end = today.checked_add_days(Days::new(30)).unwrap_or(today);
+                (Some(start), Some(end))
+            }
+            DateTarget::Specific(date) => (Some(*date), Some(*date)),
+        }
+    }
 }
 
 impl FromStr for DateTarget {

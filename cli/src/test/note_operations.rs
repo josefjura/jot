@@ -321,3 +321,127 @@ fn test_no_notes_to_delete() {
         .failure()
         .stderr(predicate::str::contains("No notes found"));
 }
+
+#[test]
+fn test_note_search_by_date_today() {
+    let db = TestDb::new();
+
+    // Add note with today's date
+    db.cmd()
+        .args(&["note", "add", "--date", "today", "today's", "note"])
+        .assert()
+        .success();
+
+    // Add note with yesterday's date
+    db.cmd()
+        .args(&["note", "add", "--date", "yesterday", "yesterday's", "note"])
+        .assert()
+        .success();
+
+    // Search for today's notes
+    db.cmd()
+        .args(&["note", "search", "--date", "today"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("today's note"))
+        .stdout(predicate::str::contains("yesterday's note").not());
+}
+
+#[test]
+fn test_note_search_by_date_yesterday() {
+    let db = TestDb::new();
+
+    // Add note with today's date
+    db.cmd()
+        .args(&["note", "add", "--date", "today", "today's", "note"])
+        .assert()
+        .success();
+
+    // Add note with yesterday's date
+    db.cmd()
+        .args(&["note", "add", "--date", "yesterday", "yesterday's", "note"])
+        .assert()
+        .success();
+
+    // Search for yesterday's notes
+    db.cmd()
+        .args(&["note", "search", "--date", "yesterday"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("yesterday's note"))
+        .stdout(predicate::str::contains("today's note").not());
+}
+
+#[test]
+fn test_note_search_by_date_specific() {
+    let db = TestDb::new();
+
+    // Add notes with specific dates
+    db.cmd()
+        .args(&["note", "add", "--date", "2025-01-15", "mid", "january"])
+        .assert()
+        .success();
+
+    db.cmd()
+        .args(&["note", "add", "--date", "2025-02-20", "late", "february"])
+        .assert()
+        .success();
+
+    // Search for specific date
+    db.cmd()
+        .args(&["note", "search", "--date", "2025-01-15"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("mid january"))
+        .stdout(predicate::str::contains("late february").not());
+}
+
+#[test]
+fn test_note_search_by_date_past() {
+    let db = TestDb::new();
+
+    // Add note with yesterday's date
+    db.cmd()
+        .args(&["note", "add", "--date", "yesterday", "past", "note"])
+        .assert()
+        .success();
+
+    // Add note with tomorrow's date
+    db.cmd()
+        .args(&["note", "add", "--date", "tomorrow", "future", "note"])
+        .assert()
+        .success();
+
+    // Search for past notes (should exclude today and future)
+    db.cmd()
+        .args(&["note", "search", "--date", "past"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("past note"))
+        .stdout(predicate::str::contains("future note").not());
+}
+
+#[test]
+fn test_note_search_by_date_future() {
+    let db = TestDb::new();
+
+    // Add note with yesterday's date
+    db.cmd()
+        .args(&["note", "add", "--date", "yesterday", "past", "note"])
+        .assert()
+        .success();
+
+    // Add note with tomorrow's date
+    db.cmd()
+        .args(&["note", "add", "--date", "tomorrow", "future", "note"])
+        .assert()
+        .success();
+
+    // Search for future notes (should exclude today and past)
+    db.cmd()
+        .args(&["note", "search", "--date", "future"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("future note"))
+        .stdout(predicate::str::contains("past note").not());
+}
