@@ -9,29 +9,55 @@ use std::path::PathBuf;
 struct TestDb {
     _temp_dir: TempDir,
     db_path: PathBuf,
-    profile_path: PathBuf,
+    profile_name: String,
 }
 
 impl TestDb {
     fn new() -> Self {
         let temp_dir = TempDir::new().unwrap();
-        let db_path = temp_dir.path().join("notes.db");
-        let profile_path = temp_dir.path().join("profile.toml");
 
-        // Create a minimal profile
+        // Generate a unique profile name for this test
+        let profile_name = format!("test_{}", uuid::Uuid::new_v4().simple());
+
+        // XDG base directories (these will have "jot" appended by get_config_dir/get_data_dir)
+        let xdg_config_base = temp_dir.path().join("config");
+        let xdg_data_base = temp_dir.path().join("data");
+
+        // Actual jot directories (where the CLI will put things)
+        let jot_config_dir = xdg_config_base.join("jot");
+        let jot_data_dir = xdg_data_base.join("jot");
+
+        // Create profile directories
+        let profile_config_dir = jot_config_dir.join("profiles");
+        let profile_data_dir = jot_data_dir.join("profiles").join(&profile_name);
+        std::fs::create_dir_all(&profile_config_dir).unwrap();
+        std::fs::create_dir_all(&profile_data_dir).unwrap();
+
+        // Database will be created at the profile data location
+        let db_path = profile_data_dir.join("notes.db");
+
+        // Create a minimal profile config
+        let profile_config_path = profile_config_dir.join(format!("{}.toml", profile_name));
         let profile_content = format!("db_path = \"{}\"", db_path.to_str().unwrap());
-        std::fs::write(&profile_path, profile_content).unwrap();
+        std::fs::write(&profile_config_path, profile_content).unwrap();
 
         Self {
             _temp_dir: temp_dir,
             db_path,
-            profile_path,
+            profile_name,
         }
     }
 
     fn cmd(&self) -> Command {
         let mut cmd = Command::cargo_bin("jot-cli").unwrap();
-        cmd.env("JOT_PROFILE", self.profile_path.to_str().unwrap());
+
+        // Override XDG base directories to use our temp dir
+        let config_dir = self._temp_dir.path().join("config");
+        let data_dir = self._temp_dir.path().join("data");
+
+        cmd.env("XDG_CONFIG_HOME", config_dir.to_str().unwrap());
+        cmd.env("XDG_DATA_HOME", data_dir.to_str().unwrap());
+        cmd.env("JOT_PROFILE", &self.profile_name);
         cmd
     }
 
@@ -47,12 +73,6 @@ impl TestDb {
             limit: None,
         };
         jot_core::search_notes(&conn, &query).unwrap()
-    }
-
-    /// Get note by ID
-    fn get_note_by_id(&self, id: &str) -> Option<jot_core::Note> {
-        let conn = jot_core::open_db(&self.db_path).unwrap();
-        jot_core::get_note_by_id(&conn, id).unwrap()
     }
 }
 

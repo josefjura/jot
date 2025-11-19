@@ -27,15 +27,26 @@ pub struct ConfigArgs {
 
 #[derive(Debug, Subcommand, Serialize, PartialEq)]
 pub enum Command {
-    /// Prints out curent configuration
+    /// Prints out current configuration
     Config,
-    /// Initializes a new profile
-    Init,
+    /// Profile management
+    #[clap(subcommand)]
+    Profile(ProfileCommand),
     /// Notes subcommands
     #[clap(subcommand)]
     Note(NoteCommand),
     /// Creates a new note. Alias for 'note add'.
     Down(NoteAddArgs),
+}
+
+#[derive(Debug, Subcommand, Serialize, PartialEq)]
+pub enum ProfileCommand {
+    /// Switch to a profile (creates it if it doesn't exist)
+    Use { name: String },
+    /// List all available profiles
+    List,
+    /// Show current active profile
+    Current,
 }
 
 #[derive(Debug, Subcommand, Serialize, PartialEq)]

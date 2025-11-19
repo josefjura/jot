@@ -3,6 +3,7 @@ use std::path::Path;
 use jot_core::SearchQuery;
 
 use crate::{
+    app_config::AppConfig,
     args::{NoteCommand, NoteSearchArgs},
     db::LocalDb,
     editor::Editor,
@@ -17,6 +18,7 @@ const TEMPLATE: &str = r#"tags = ["work", "important"]
 pub fn note_cmd(
     db_path: &Path,
     subcommand: NoteCommand,
+    config: &AppConfig,
 ) -> Result<(), anyhow::Error> {
     let db = LocalDb::open(db_path)?;
 
@@ -26,13 +28,26 @@ pub fn note_cmd(
                 let editor = Editor::new(TEMPLATE);
                 let result = editor.open(&args)?;
 
-                let tags = result.tags.iter().map(|t| t.to_string()).collect();
+                let mut tags: Vec<String> = result.tags.iter().map(|t| t.to_string()).collect();
+                // Add default tags from profile
+                for default_tag in &config.default_tags {
+                    if !tags.contains(default_tag) {
+                        tags.push(default_tag.clone());
+                    }
+                }
                 let date = result.date.to_date().format("%Y-%m-%d").to_string();
 
                 db.create_note(result.content, tags, Some(date))?
             } else {
                 let date = args.date.to_date().format("%Y-%m-%d").to_string();
-                db.create_note(args.content.join(" "), args.tag, Some(date))?
+                let mut tags = args.tag.clone();
+                // Add default tags from profile
+                for default_tag in &config.default_tags {
+                    if !tags.contains(default_tag) {
+                        tags.push(default_tag.clone());
+                    }
+                }
+                db.create_note(args.content.join(" "), tags, Some(date))?
             };
 
             println!("Note added successfully ({})", note.id);
