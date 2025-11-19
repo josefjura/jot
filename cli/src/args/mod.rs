@@ -20,23 +20,34 @@ pub struct CliArgs {
 
 #[derive(Debug, Args, Serialize)]
 pub struct ConfigArgs {
-    /// Path to profile configuration file
+    /// Profile name to use
     #[arg(long, short, env = "JOT_PROFILE")]
-    pub profile_path: Option<String>,
+    pub profile: Option<String>,
 }
 
-#[derive(Debug, Subcommand, Serialize, PartialEq)]
+#[derive(Debug, Subcommand, PartialEq)]
 pub enum Command {
     /// Prints out current configuration
     Config,
-    /// Profile management
-    #[clap(subcommand)]
-    Profile(ProfileCommand),
+    /// Profile management (defaults to showing current profile)
+    Profile {
+        #[clap(subcommand)]
+        command: Option<ProfileCommand>,
+    },
     /// Notes subcommands
     #[clap(subcommand)]
     Note(NoteCommand),
     /// Creates a new note. Alias for 'note add'.
     Down(NoteAddArgs),
+    /// Search notes. Alias for 'note search'.
+    #[clap(name = "ls")]
+    List(NoteSearchArgs),
+    /// Generate shell completion scripts
+    Completion {
+        /// Shell type
+        #[arg(value_enum)]
+        shell: clap_complete::Shell,
+    },
 }
 
 #[derive(Debug, Subcommand, Serialize, PartialEq)]
@@ -53,9 +64,11 @@ pub enum ProfileCommand {
 pub enum NoteCommand {
     /// Creates a new note.
     Add(NoteAddArgs),
-    /// Lists notes.
+    /// Search notes.
+    #[clap(visible_alias = "ls")]
     Search(NoteSearchArgs),
     /// Get latest note.
+    #[clap(visible_alias = "latest")]
     Last(NoteLatestArgs),
     /// Edit a note.
     Edit(NoteEditArgs),
@@ -72,11 +85,14 @@ pub struct NoteAddArgs {
     #[arg(trailing_var_arg = true)]
     pub content: Vec<String>,
     /// Open in external editor for interactive editing
-    #[arg(long, short, default_value_t = false)]
-    pub interactive: bool,
-    /// Filter by tags (can be specified multiple times or comma-separated)
-    #[arg(long, value_name = "TAGS", value_delimiter = ',')]
+    #[arg(long, short = 'e', default_value_t = false)]
+    pub editor: bool,
+    /// Add tags to note (can be specified multiple times or comma-separated)
+    #[arg(long, short = 't', value_name = "TAGS", value_delimiter = ',')]
     pub tag: Vec<String>,
+    /// Quiet mode: only output the note ID
+    #[arg(long, short = 'q', default_value_t = false)]
+    pub quiet: bool,
 }
 
 #[derive(Debug, Clone, ValueEnum, PartialEq, Serialize, Deserialize)]
@@ -84,6 +100,8 @@ pub enum OutputFormat {
     Pretty,
     Plain,
     Json,
+    /// Output only note IDs (one per line)
+    Id,
 }
 
 impl Default for OutputFormat {
@@ -100,7 +118,7 @@ pub struct NoteSearchArgs {
     pub term: Option<String>,
 
     /// Filter by tags (can be specified multiple times or comma-separated)
-    #[arg(long, value_name = "TAGS", value_delimiter = ',')]
+    #[arg(long, short = 't', value_name = "TAGS", value_delimiter = ',')]
     pub tag: Vec<String>,
 
     /// Filter by date (e.g., "today", "last week", "2024-03-16")
@@ -108,11 +126,11 @@ pub struct NoteSearchArgs {
     pub date: Option<DateTarget>,
 
     /// Number of lines to display for each note (default: full content)
-    #[arg(long, value_name = "N")]
+    #[arg(long, short = 'L', value_name = "N")]
     pub lines: Option<usize>,
 
     /// Maximum number of results to return
-    #[arg(long, short = 'l')]
+    #[arg(long, short = 'n')]
     pub limit: Option<i64>,
 
     /// Output format (pretty, plain, or json)
@@ -121,14 +139,14 @@ pub struct NoteSearchArgs {
 }
 
 #[derive(Debug, clap::Args, PartialEq, Serialize, Deserialize)]
-#[command(about = "Retrieve the latest order")]
+#[command(about = "Retrieve the latest note")]
 pub struct NoteLatestArgs {
     /// Search term to filter notes
     #[arg(default_value = None)]
     pub term: Option<String>,
 
     /// Filter by tags (can be specified multiple times or comma-separated)
-    #[arg(long, value_name = "TAGS", value_delimiter = ',')]
+    #[arg(long, short = 't', value_name = "TAGS", value_delimiter = ',')]
     pub tag: Vec<String>,
 
     /// Output format (pretty, plain, or json)

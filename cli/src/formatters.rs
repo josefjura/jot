@@ -15,6 +15,7 @@ impl NoteSearchFormatter {
         let color_choice = match args.output {
             OutputFormat::Plain => ColorChoice::Never,
             OutputFormat::Json => ColorChoice::Never,
+            OutputFormat::Id => ColorChoice::Never,
             OutputFormat::Pretty => ColorChoice::Auto,
         };
 
@@ -27,14 +28,22 @@ impl NoteSearchFormatter {
     pub fn print_notes(&mut self, notes: &[Note]) -> io::Result<()> {
         let mut buffer = self.writer.buffer();
 
-        if self.args.output == OutputFormat::Json {
-            self.print_json(notes, &mut buffer)?;
-        } else {
-            if notes.is_empty() {
-                writeln!(buffer, "No notes found")?;
-            } else {
+        match self.args.output {
+            OutputFormat::Json => {
+                self.print_json(notes, &mut buffer)?;
+            }
+            OutputFormat::Id => {
                 for note in notes {
-                    self.print_note(&mut buffer, note, self.args.output == OutputFormat::Pretty)?;
+                    writeln!(buffer, "{}", note.id)?;
+                }
+            }
+            _ => {
+                if notes.is_empty() {
+                    writeln!(buffer, "No notes found")?;
+                } else {
+                    for note in notes {
+                        self.print_note(&mut buffer, note, self.args.output == OutputFormat::Pretty)?;
+                    }
                 }
             }
         }

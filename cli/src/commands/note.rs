@@ -24,7 +24,7 @@ pub fn note_cmd(
 
     match subcommand {
         NoteCommand::Add(args) => {
-            let note = if args.interactive {
+            let note = if args.editor {
                 let editor = Editor::new(TEMPLATE);
                 let result = editor.open(&args)?;
 
@@ -50,7 +50,11 @@ pub fn note_cmd(
                 db.create_note(args.content.join(" "), tags, Some(date))?
             };
 
-            println!("Note added successfully ({})", note.id);
+            if args.quiet {
+                println!("{}", note.id);
+            } else {
+                println!("Note added successfully ({})", note.id);
+            }
         }
         NoteCommand::Search(args) => {
             let query = build_search_query(&args);

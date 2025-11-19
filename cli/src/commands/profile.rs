@@ -3,8 +3,8 @@ use crate::{
     profile::{self, Profile},
 };
 
-pub fn profile_cmd(subcommand: ProfileCommand) -> Result<(), anyhow::Error> {
-    match subcommand {
+pub fn profile_cmd(subcommand: Option<ProfileCommand>) -> Result<(), anyhow::Error> {
+    match subcommand.unwrap_or(ProfileCommand::Current) {
         ProfileCommand::Use { name } => {
             // Set as current profile
             profile::set_current_profile_name(&name)?;

@@ -13,12 +13,12 @@ pub mod test_context;
 
 #[test]
 fn test_profile_arg() {
-    // Test that --profile-path arg overrides JOT_PROFILE env var
+    // Test that --profile arg overrides JOT_PROFILE env var
     let mut cmd = Command::cargo_bin("jot-cli").unwrap();
 
     let assert = cmd
         .env("JOT_PROFILE", "wrong_profile")
-        .args(&["--profile-path", "test_profile_arg"])
+        .args(&["--profile", "test_profile_arg"])
         .arg("config")
         .assert();
 

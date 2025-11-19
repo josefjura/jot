@@ -1,12 +1,13 @@
 [package]
 name = "jot-cli"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 
 [dependencies]
 jot-core = { workspace = true }
 rusqlite = { version = "0.32", features = ["bundled"] }
 clap = { version = "4.5.23", features = ["derive", "cargo", "env"] }
+clap_complete = "4.5"
 directories = "5.0.1"
 serde = "1.0.210"
 serde_json = "1.0.133"
