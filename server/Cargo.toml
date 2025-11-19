@@ -2,6 +2,7 @@
 name = "jot-server"
 version = "0.1.0"
 edition = "2021"
+repository = "https://github.com/josefjura/jot"
 
 [dependencies]
 jot-core = { workspace = true }
