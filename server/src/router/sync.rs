@@ -73,7 +73,10 @@ async fn sync_notes(
     // Check authentication
     let user = match user_opt {
         Some(Extension(user)) => user,
-        None => return RestError::Authorization(crate::errors::AuthError::TokenNotFound).into_response(),
+        None => {
+            return RestError::Authorization(crate::errors::AuthError::TokenNotFound)
+                .into_response()
+        }
     };
 
     let result = perform_sync(&state, &user, request).await;
@@ -93,9 +96,8 @@ async fn perform_sync(
     let user_db_path = state.user_db_path(&user.id.to_string());
 
     // Open user's database
-    let conn = jot_core::open_db(&user_db_path).map_err(|e| {
-        RestError::Internal(format!("Failed to open user database: {}", e))
-    })?;
+    let conn = jot_core::open_db(&user_db_path)
+        .map_err(|e| RestError::Internal(format!("Failed to open user database: {}", e)))?;
 
     // Convert DTOs to core Note types
     let client_notes: Vec<jot_core::Note> = request.notes.into_iter().map(|n| n.into()).collect();
@@ -106,9 +108,8 @@ async fn perform_sync(
         last_sync: request.last_sync,
     };
 
-    let sync_response = jot_core::process_sync_request(&conn, sync_request).map_err(|e| {
-        RestError::Internal(format!("Failed to process sync: {}", e))
-    })?;
+    let sync_response = jot_core::process_sync_request(&conn, sync_request)
+        .map_err(|e| RestError::Internal(format!("Failed to process sync: {}", e)))?;
 
     // Convert back to DTOs
     let response_notes: Vec<NoteDto> = sync_response.notes.into_iter().map(|n| n.into()).collect();
@@ -122,13 +123,10 @@ fn sync_notes_docs(op: TransformOperation) -> TransformOperation {
     op.description("Sync notes with server")
         .tag("sync")
         .response_with::<200, Json<SyncResponseDto>, _>(|res| {
-            res.example(SyncResponseDto {
-                notes: vec![],
-            })
+            res.example(SyncResponseDto { notes: vec![] })
         })
 }
 
 pub fn sync_routes(_app_state: AppState) -> ApiRouter<AppState> {
-    ApiRouter::new()
-        .api_route("/sync", post_with(sync_notes, sync_notes_docs))
+    ApiRouter::new().api_route("/sync", post_with(sync_notes, sync_notes_docs))
 }

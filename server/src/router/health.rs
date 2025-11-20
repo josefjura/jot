@@ -4,7 +4,11 @@ use aide::{
 };
 use axum::{http::StatusCode, response::IntoResponse, Extension};
 
-use crate::{errors::{AuthError, RestError}, model::user::User, state::AppState};
+use crate::{
+    errors::{AuthError, RestError},
+    model::user::User,
+    state::AppState,
+};
 
 fn health_routes_public() -> ApiRouter<AppState> {
     ApiRouter::new().api_route("/health/ping", get_with(ping, ping_docs))

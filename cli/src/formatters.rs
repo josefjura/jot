@@ -128,8 +128,7 @@ impl NoteSearchFormatter {
     }
 
     fn print_json(&mut self, notes: &[Note], buffer: &mut termcolor::Buffer) -> io::Result<()> {
-        let json = serde_json::to_string_pretty(notes)
-            .map_err(io::Error::other)?;
+        let json = serde_json::to_string_pretty(notes).map_err(io::Error::other)?;
 
         writeln!(buffer, "{}", json)?;
         Ok(())

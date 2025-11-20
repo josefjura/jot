@@ -19,9 +19,8 @@ pub fn create_note(
 ) -> Result<Note> {
     let id = ulid::Ulid::new().to_string();
     let now = chrono::Utc::now().timestamp_millis();
-    let tags_json = serde_json::to_string(&tags).map_err(|e| {
-        rusqlite::Error::ToSqlConversionFailure(Box::new(e))
-    })?;
+    let tags_json = serde_json::to_string(&tags)
+        .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
 
     conn.execute(
         "INSERT INTO notes (id, content, tags, date, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
@@ -72,7 +71,7 @@ pub fn get_note_by_id(conn: &Connection, id: &str) -> Result<Option<Note>> {
 /// Search notes with various filters
 pub fn search_notes(conn: &Connection, query: &SearchQuery) -> Result<Vec<Note>> {
     let mut sql = String::from(
-        "SELECT id, content, tags, date, created_at, updated_at, deleted_at FROM notes WHERE 1=1"
+        "SELECT id, content, tags, date, created_at, updated_at, deleted_at FROM notes WHERE 1=1",
     );
     let mut params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
 
@@ -149,9 +148,8 @@ pub fn update_note(
     date: Option<String>,
 ) -> Result<()> {
     let now = chrono::Utc::now().timestamp_millis();
-    let tags_json = serde_json::to_string(&tags).map_err(|e| {
-        rusqlite::Error::ToSqlConversionFailure(Box::new(e))
-    })?;
+    let tags_json = serde_json::to_string(&tags)
+        .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
 
     conn.execute(
         "UPDATE notes SET content = ?1, tags = ?2, date = ?3, updated_at = ?4 WHERE id = ?5",
@@ -179,7 +177,7 @@ pub fn get_notes_since(conn: &Connection, timestamp: i64) -> Result<Vec<Note>> {
         "SELECT id, content, tags, date, created_at, updated_at, deleted_at
          FROM notes
          WHERE updated_at > ?1
-         ORDER BY updated_at ASC"
+         ORDER BY updated_at ASC",
     )?;
 
     let rows = stmt.query_map(params![timestamp], |row| {
@@ -209,9 +207,8 @@ pub fn get_notes_since(conn: &Connection, timestamp: i64) -> Result<Vec<Note>> {
 
 /// Upsert a note (insert or update based on timestamp comparison)
 pub fn upsert_note(conn: &Connection, note: &Note) -> Result<()> {
-    let tags_json = serde_json::to_string(&note.tags).map_err(|e| {
-        rusqlite::Error::ToSqlConversionFailure(Box::new(e))
-    })?;
+    let tags_json = serde_json::to_string(&note.tags)
+        .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
 
     // Check if note exists
     if let Some(existing) = get_note_by_id(conn, &note.id)? {
@@ -286,8 +283,7 @@ mod tests {
         let db_path = dir.path().join("test.db");
         let conn = open_db(&db_path).expect("Failed to open db");
 
-        let note = create_note(&conn, "test", vec![], None)
-            .expect("Failed to create note");
+        let note = create_note(&conn, "test", vec![], None).expect("Failed to create note");
 
         soft_delete_note(&conn, &note.id).expect("Failed to delete note");
 

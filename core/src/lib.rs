@@ -6,9 +6,9 @@ pub mod schema;
 pub mod sync;
 
 // Re-export commonly used types
-pub use models::{Note, SearchQuery, SyncRequest, SyncResponse};
 pub use db::{
-    open_db, create_note, get_note_by_id, search_notes, update_note,
-    soft_delete_note, get_notes_since, upsert_note, get_sync_state, set_sync_state,
+    create_note, get_note_by_id, get_notes_since, get_sync_state, open_db, search_notes,
+    set_sync_state, soft_delete_note, update_note, upsert_note,
 };
+pub use models::{Note, SearchQuery, SyncRequest, SyncResponse};
 pub use sync::{merge_notes, process_sync_request};

@@ -28,7 +28,10 @@ pub fn get_schema_version(conn: &rusqlite::Connection) -> Result<i32, rusqlite::
 }
 
 /// Set schema version in database
-pub fn set_schema_version(conn: &rusqlite::Connection, version: i32) -> Result<(), rusqlite::Error> {
+pub fn set_schema_version(
+    conn: &rusqlite::Connection,
+    version: i32,
+) -> Result<(), rusqlite::Error> {
     conn.pragma_update(None, "user_version", version)
 }
 
@@ -46,8 +49,6 @@ pub fn migrate(conn: &rusqlite::Connection) -> Result<(), rusqlite::Error> {
             // Already up to date
             Ok(())
         }
-        _ => {
-            Err(rusqlite::Error::InvalidQuery)
-        }
+        _ => Err(rusqlite::Error::InvalidQuery),
     }
 }

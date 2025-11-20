@@ -38,12 +38,14 @@ async fn run() -> Result<(), ApplicationError> {
     let (host, port, jwt_secret, data_dir) = setup_env()?;
 
     // Ensure data directories exist
-    std::fs::create_dir_all(&data_dir)
-        .map_err(|e| ApplicationError::Internal(format!("Failed to create data directory: {}", e)))?;
+    std::fs::create_dir_all(&data_dir).map_err(|e| {
+        ApplicationError::Internal(format!("Failed to create data directory: {}", e))
+    })?;
 
     let users_dir = data_dir.join("users");
-    std::fs::create_dir_all(&users_dir)
-        .map_err(|e| ApplicationError::Internal(format!("Failed to create users directory: {}", e)))?;
+    std::fs::create_dir_all(&users_dir).map_err(|e| {
+        ApplicationError::Internal(format!("Failed to create users directory: {}", e))
+    })?;
 
     // Open auth database
     let auth_db_path = data_dir.join("auth.db");
@@ -94,8 +96,7 @@ fn setup_env() -> Result<(String, String, String, std::path::PathBuf), Applicati
         .map_err(|e| ApplicationError::EnvError(e, "JOT_PORT".to_string()))?;
     let jwt_secret = std::env::var("JOT_JWT_SECRET")
         .map_err(|e| ApplicationError::EnvError(e, "JOT_JWT_SECRET".to_string()))?;
-    let data_dir = env::var("JOT_DATA_DIR")
-        .unwrap_or_else(|_| "./data".to_string());
+    let data_dir = env::var("JOT_DATA_DIR").unwrap_or_else(|_| "./data".to_string());
 
     Ok((host, port, jwt_secret, std::path::PathBuf::from(data_dir)))
 }

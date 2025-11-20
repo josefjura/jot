@@ -50,10 +50,7 @@ pub fn merge_notes(
 }
 
 /// Process sync request (server-side logic)
-pub fn process_sync_request(
-    conn: &Connection,
-    request: SyncRequest,
-) -> Result<SyncResponse> {
+pub fn process_sync_request(conn: &Connection, request: SyncRequest) -> Result<SyncResponse> {
     let notes = merge_notes(conn, request.notes, request.last_sync)?;
     Ok(SyncResponse { notes })
 }
@@ -62,9 +59,9 @@ pub fn process_sync_request(
 mod tests {
     use super::*;
     use crate::db::{create_note, open_db};
-    use tempfile::TempDir;
     use std::thread;
     use std::time::Duration;
+    use tempfile::TempDir;
 
     #[test]
     fn test_merge_new_note_from_client() {
@@ -82,8 +79,7 @@ mod tests {
             deleted_at: None,
         };
 
-        let result = merge_notes(&conn, vec![client_note.clone()], 0)
-            .expect("Failed to merge");
+        let result = merge_notes(&conn, vec![client_note.clone()], 0).expect("Failed to merge");
 
         // Should return empty since server has no newer notes
         assert_eq!(result.len(), 0);
@@ -103,8 +99,8 @@ mod tests {
         let conn = open_db(&db_path).expect("Failed to open db");
 
         // Create server note
-        let note = create_note(&conn, "server version", vec![], None)
-            .expect("Failed to create note");
+        let note =
+            create_note(&conn, "server version", vec![], None).expect("Failed to create note");
 
         thread::sleep(Duration::from_millis(10));
 
@@ -119,8 +115,7 @@ mod tests {
             deleted_at: None,
         };
 
-        let result = merge_notes(&conn, vec![client_note.clone()], 0)
-            .expect("Failed to merge");
+        let result = merge_notes(&conn, vec![client_note.clone()], 0).expect("Failed to merge");
 
         // Server should not send anything back (client version wins)
         assert_eq!(result.len(), 0);

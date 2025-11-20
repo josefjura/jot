@@ -1,12 +1,12 @@
+use rusqlite::Connection;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
-use rusqlite::Connection;
 
 #[derive(Clone)]
 pub struct AppState {
-    pub auth_db: Arc<Mutex<Connection>>,  // Auth database (users, device_auth)
+    pub auth_db: Arc<Mutex<Connection>>, // Auth database (users, device_auth)
     pub jwt_secret: String,
-    pub data_dir: PathBuf,                 // Directory for per-user note databases
+    pub data_dir: PathBuf, // Directory for per-user note databases
 }
 
 impl AppState {
