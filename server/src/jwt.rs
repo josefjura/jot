@@ -40,7 +40,7 @@ pub fn verify_password(password: &str, hashed_password: &str) -> bool {
     let is_valid = match PasswordHash::new(hashed_password) {
         Ok(parsed_hash) => Argon2::default()
             .verify_password(password.as_bytes(), &parsed_hash)
-            .map_or(false, |_| true),
+            .is_ok_and(|_| true),
         Err(_err) => false,
     };
 

@@ -1,3 +1,4 @@
+use std::fmt;
 use std::str::FromStr;
 
 use chrono::{Days, Local, NaiveDate};
@@ -47,9 +48,9 @@ impl<'de> Deserialize<'de> for DateSource {
     }
 }
 
-impl ToString for DateSource {
-    fn to_string(&self) -> String {
-        self.to_date().format("%Y-%m-%d").to_string()
+impl fmt::Display for DateSource {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.to_date().format("%Y-%m-%d"))
     }
 }
 

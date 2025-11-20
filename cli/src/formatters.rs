@@ -103,7 +103,7 @@ impl NoteSearchFormatter {
     fn print_metadata(&self, buffer: &mut termcolor::Buffer, note: &Note) -> io::Result<()> {
         let mut metadata = Vec::new();
 
-        metadata.push(format!("{}", &note.id[..8])); // Show first 8 chars of ULID
+        metadata.push(note.id[..8].to_string()); // Show first 8 chars of ULID
 
         // Show note date if present
         if let Some(ref date) = note.date {
@@ -129,14 +129,14 @@ impl NoteSearchFormatter {
 
     fn print_json(&mut self, notes: &[Note], buffer: &mut termcolor::Buffer) -> io::Result<()> {
         let json = serde_json::to_string_pretty(notes)
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+            .map_err(io::Error::other)?;
 
         writeln!(buffer, "{}", json)?;
         Ok(())
     }
 
     fn create_preview(&self, content: &str) -> String {
-        let max_lines = self.args.lines.unwrap_or(std::usize::MAX);
+        let max_lines = self.args.lines.unwrap_or(usize::MAX);
         let preview: String = content
             .lines()
             .take(max_lines)

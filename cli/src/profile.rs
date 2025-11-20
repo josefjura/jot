@@ -3,20 +3,11 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Ok};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Default)]
 pub struct Profile {
     pub db_path: Option<String>,
     #[serde(default)]
     pub default_tags: Vec<String>,
-}
-
-impl Default for Profile {
-    fn default() -> Self {
-        Profile {
-            db_path: None,
-            default_tags: vec![],
-        }
-    }
 }
 
 impl Profile {

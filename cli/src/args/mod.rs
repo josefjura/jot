@@ -168,11 +168,11 @@ impl Default for NoteSearchArgs {
 }
 
 pub fn parse_date_target(s: &str) -> anyhow::Result<DateTarget> {
-    return s.parse();
+    s.parse()
 }
 
 pub fn parse_date_source(s: &str) -> anyhow::Result<DateSource> {
-    return s.parse();
+    s.parse()
 }
 
 #[derive(Debug, Args, Serialize, PartialEq)]

@@ -1,3 +1,4 @@
+use std::fmt;
 use std::str::FromStr;
 
 use chrono::{Days, Local, NaiveDate};
@@ -83,19 +84,19 @@ impl FromStr for DateTarget {
     }
 }
 
-impl ToString for DateTarget {
-    fn to_string(&self) -> String {
+impl fmt::Display for DateTarget {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            DateTarget::All => "all".to_string(),
-            DateTarget::Past => "past".to_string(),
-            DateTarget::Future => "future".to_string(),
-            DateTarget::Today => "today".to_string(),
-            DateTarget::Yesterday => "yesterday".to_string(),
-            DateTarget::LastWeek => "last week".to_string(),
-            DateTarget::LastMonth => "last month".to_string(),
-            DateTarget::NextWeek => "next week".to_string(),
-            DateTarget::NextMonth => "next month".to_string(),
-            DateTarget::Specific(dt) => dt.to_string(),
+            DateTarget::All => write!(f, "all"),
+            DateTarget::Past => write!(f, "past"),
+            DateTarget::Future => write!(f, "future"),
+            DateTarget::Today => write!(f, "today"),
+            DateTarget::Yesterday => write!(f, "yesterday"),
+            DateTarget::LastWeek => write!(f, "last week"),
+            DateTarget::LastMonth => write!(f, "last month"),
+            DateTarget::NextWeek => write!(f, "next week"),
+            DateTarget::NextMonth => write!(f, "next month"),
+            DateTarget::Specific(dt) => write!(f, "{}", dt),
         }
     }
 }
