@@ -146,6 +146,9 @@ jobs:
       - name: Check compilation
         run: cargo check --package jot-cli --package jot-core --all-targets
 
+      - name: Build binaries (required for integration tests)
+        run: cargo build --package jot-cli
+
       - name: Run tests
         run: cargo test --package jot-cli --package jot-core --all-targets
 
