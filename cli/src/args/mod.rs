@@ -95,19 +95,14 @@ pub struct NoteAddArgs {
     pub quiet: bool,
 }
 
-#[derive(Debug, Clone, ValueEnum, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, ValueEnum, PartialEq, Serialize, Deserialize, Default)]
 pub enum OutputFormat {
+    #[default]
     Pretty,
     Plain,
     Json,
     /// Output only note IDs (one per line)
     Id,
-}
-
-impl Default for OutputFormat {
-    fn default() -> Self {
-        Self::Pretty
-    }
 }
 
 #[derive(Debug, clap::Args, PartialEq, Serialize, Deserialize)]

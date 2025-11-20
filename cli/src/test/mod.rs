@@ -1,4 +1,5 @@
 #![allow(clippy::unwrap_used)]
+#![allow(deprecated)]
 
 use assert_cmd::Command;
 use predicates::prelude::{
@@ -18,7 +19,7 @@ fn test_profile_arg() {
 
     let assert = cmd
         .env("JOT_PROFILE", "wrong_profile")
-        .args(&["--profile", "test_profile_arg"])
+        .args(["--profile", "test_profile_arg"])
         .arg("config")
         .assert();
 

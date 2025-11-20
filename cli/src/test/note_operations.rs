@@ -1,4 +1,5 @@
 #![allow(clippy::unwrap_used)]
+#![allow(deprecated)]
 
 use assert_cmd::Command;
 use predicates::prelude::*;
@@ -81,7 +82,7 @@ fn test_note_add_simple() {
     let db = TestDb::new();
 
     db.cmd()
-        .args(&["note", "add", "my", "first", "note"])
+        .args(["note", "add", "my", "first", "note"])
         .assert()
         .success()
         .stdout(predicate::str::contains("Note added successfully"));
@@ -97,7 +98,7 @@ fn test_note_add_with_tags() {
     let db = TestDb::new();
 
     db.cmd()
-        .args(&[
+        .args([
             "note",
             "add",
             "--tag",
@@ -119,7 +120,7 @@ fn test_note_add_with_date() {
     let db = TestDb::new();
 
     db.cmd()
-        .args(&["note", "add", "--date", "2025-01-15", "dated", "note"])
+        .args(["note", "add", "--date", "2025-01-15", "dated", "note"])
         .assert()
         .success();
 
@@ -132,7 +133,7 @@ fn test_note_add_with_date() {
 fn test_down_alias() {
     let db = TestDb::new();
 
-    db.cmd().args(&["down", "quick", "note"]).assert().success();
+    db.cmd().args(["down", "quick", "note"]).assert().success();
 
     let notes = db.get_notes();
     assert_eq!(notes.len(), 1);
@@ -145,21 +146,21 @@ fn test_note_search_all() {
 
     // Add multiple notes
     db.cmd()
-        .args(&["note", "add", "first", "note"])
+        .args(["note", "add", "first", "note"])
         .assert()
         .success();
     db.cmd()
-        .args(&["note", "add", "second", "note"])
+        .args(["note", "add", "second", "note"])
         .assert()
         .success();
     db.cmd()
-        .args(&["note", "add", "third", "note"])
+        .args(["note", "add", "third", "note"])
         .assert()
         .success();
 
     // Search all
     db.cmd()
-        .args(&["note", "search"])
+        .args(["note", "search"])
         .assert()
         .success()
         .stdout(predicate::str::contains("first note"))
@@ -172,17 +173,17 @@ fn test_note_search_by_term() {
     let db = TestDb::new();
 
     db.cmd()
-        .args(&["note", "add", "meeting", "notes"])
+        .args(["note", "add", "meeting", "notes"])
         .assert()
         .success();
     db.cmd()
-        .args(&["note", "add", "random", "thoughts"])
+        .args(["note", "add", "random", "thoughts"])
         .assert()
         .success();
 
     // Search for "meeting"
     db.cmd()
-        .args(&["note", "search", "meeting"])
+        .args(["note", "search", "meeting"])
         .assert()
         .success()
         .stdout(predicate::str::contains("meeting notes"))
@@ -194,17 +195,17 @@ fn test_note_search_by_tag() {
     let db = TestDb::new();
 
     db.cmd()
-        .args(&["note", "add", "--tag", "work", "work", "stuff"])
+        .args(["note", "add", "--tag", "work", "work", "stuff"])
         .assert()
         .success();
     db.cmd()
-        .args(&["note", "add", "--tag", "personal", "home", "stuff"])
+        .args(["note", "add", "--tag", "personal", "home", "stuff"])
         .assert()
         .success();
 
     // Search by tag
     db.cmd()
-        .args(&["note", "search", "--tag", "work"])
+        .args(["note", "search", "--tag", "work"])
         .assert()
         .success()
         .stdout(predicate::str::contains("work stuff"))
@@ -218,14 +219,14 @@ fn test_note_search_with_limit() {
     // Add 5 notes
     for i in 1..=5 {
         db.cmd()
-            .args(&["note", "add", &format!("note {}", i)])
+            .args(["note", "add", &format!("note {}", i)])
             .assert()
             .success();
     }
 
     // Search with limit 2
     db.cmd()
-        .args(&["note", "search", "--limit", "2"])
+        .args(["note", "search", "--limit", "2"])
         .assert()
         .success();
 
@@ -233,7 +234,7 @@ fn test_note_search_with_limit() {
     // and contains at least one note
     let output = db
         .cmd()
-        .args(&["note", "search", "--limit", "2", "--output", "json"])
+        .args(["note", "search", "--limit", "2", "--output", "json"])
         .output()
         .unwrap();
 
@@ -247,21 +248,21 @@ fn test_note_last() {
     let db = TestDb::new();
 
     db.cmd()
-        .args(&["note", "add", "first", "note"])
+        .args(["note", "add", "first", "note"])
         .assert()
         .success();
     db.cmd()
-        .args(&["note", "add", "second", "note"])
+        .args(["note", "add", "second", "note"])
         .assert()
         .success();
     db.cmd()
-        .args(&["note", "add", "latest", "note"])
+        .args(["note", "add", "latest", "note"])
         .assert()
         .success();
 
     // Get last note
     db.cmd()
-        .args(&["note", "last"])
+        .args(["note", "last"])
         .assert()
         .success()
         .stdout(predicate::str::contains("latest note"));
@@ -272,11 +273,11 @@ fn test_note_delete_latest() {
     let db = TestDb::new();
 
     db.cmd()
-        .args(&["note", "add", "first", "note"])
+        .args(["note", "add", "first", "note"])
         .assert()
         .success();
     db.cmd()
-        .args(&["note", "add", "second", "note"])
+        .args(["note", "add", "second", "note"])
         .assert()
         .success();
 
@@ -284,7 +285,7 @@ fn test_note_delete_latest() {
 
     // Delete latest (requires confirmation, so use --yes)
     db.cmd()
-        .args(&["note", "delete", "--yes"])
+        .args(["note", "delete", "--yes"])
         .assert()
         .success()
         .stdout(predicate::str::contains("Deleted note"));
@@ -299,11 +300,11 @@ fn test_note_delete_by_id() {
     let db = TestDb::new();
 
     db.cmd()
-        .args(&["note", "add", "first", "note"])
+        .args(["note", "add", "first", "note"])
         .assert()
         .success();
     db.cmd()
-        .args(&["note", "add", "second", "note"])
+        .args(["note", "add", "second", "note"])
         .assert()
         .success();
 
@@ -313,7 +314,7 @@ fn test_note_delete_by_id() {
 
     // Delete specific note
     db.cmd()
-        .args(&["note", "delete", "--yes", second_id])
+        .args(["note", "delete", "--yes", second_id])
         .assert()
         .success();
 
@@ -326,9 +327,9 @@ fn test_note_delete_by_id() {
 fn test_note_delete_multiple() {
     let db = TestDb::new();
 
-    db.cmd().args(&["note", "add", "first"]).assert().success();
-    db.cmd().args(&["note", "add", "second"]).assert().success();
-    db.cmd().args(&["note", "add", "third"]).assert().success();
+    db.cmd().args(["note", "add", "first"]).assert().success();
+    db.cmd().args(["note", "add", "second"]).assert().success();
+    db.cmd().args(["note", "add", "third"]).assert().success();
 
     let notes = db.get_notes();
     // Notes are: [0]=third (newest), [1]=second, [2]=first (oldest)
@@ -337,7 +338,7 @@ fn test_note_delete_multiple() {
 
     // Delete two notes
     db.cmd()
-        .args(&["note", "delete", "--yes", id1, id2])
+        .args(["note", "delete", "--yes", id1, id2])
         .assert()
         .success();
 
@@ -354,7 +355,7 @@ fn test_note_delete_nonexistent() {
     // Note: Currently soft_delete doesn't fail for non-existent IDs (UPDATE with 0 rows)
     // This just succeeds silently, which is acceptable for idempotent operations
     db.cmd()
-        .args(&["note", "delete", "--yes", "nonexistent_id"])
+        .args(["note", "delete", "--yes", "nonexistent_id"])
         .assert()
         .success();
 }
@@ -364,13 +365,13 @@ fn test_note_search_json_output() {
     let db = TestDb::new();
 
     db.cmd()
-        .args(&["note", "add", "--tag", "test", "test", "note"])
+        .args(["note", "add", "--tag", "test", "test", "note"])
         .assert()
         .success();
 
     let output = db
         .cmd()
-        .args(&["note", "search", "--output", "json"])
+        .args(["note", "search", "--output", "json"])
         .output()
         .unwrap();
 
@@ -390,7 +391,7 @@ fn test_no_notes_to_delete() {
 
     // Try to delete when no notes exist
     db.cmd()
-        .args(&["note", "delete", "--yes"])
+        .args(["note", "delete", "--yes"])
         .assert()
         .failure()
         .stderr(predicate::str::contains("No notes found"));
@@ -402,19 +403,19 @@ fn test_note_search_by_date_today() {
 
     // Add note with today's date
     db.cmd()
-        .args(&["note", "add", "--date", "today", "today's", "note"])
+        .args(["note", "add", "--date", "today", "today's", "note"])
         .assert()
         .success();
 
     // Add note with yesterday's date
     db.cmd()
-        .args(&["note", "add", "--date", "yesterday", "yesterday's", "note"])
+        .args(["note", "add", "--date", "yesterday", "yesterday's", "note"])
         .assert()
         .success();
 
     // Search for today's notes
     db.cmd()
-        .args(&["note", "search", "--date", "today"])
+        .args(["note", "search", "--date", "today"])
         .assert()
         .success()
         .stdout(predicate::str::contains("today's note"))
@@ -427,19 +428,19 @@ fn test_note_search_by_date_yesterday() {
 
     // Add note with today's date
     db.cmd()
-        .args(&["note", "add", "--date", "today", "today's", "note"])
+        .args(["note", "add", "--date", "today", "today's", "note"])
         .assert()
         .success();
 
     // Add note with yesterday's date
     db.cmd()
-        .args(&["note", "add", "--date", "yesterday", "yesterday's", "note"])
+        .args(["note", "add", "--date", "yesterday", "yesterday's", "note"])
         .assert()
         .success();
 
     // Search for yesterday's notes
     db.cmd()
-        .args(&["note", "search", "--date", "yesterday"])
+        .args(["note", "search", "--date", "yesterday"])
         .assert()
         .success()
         .stdout(predicate::str::contains("yesterday's note"))
@@ -452,18 +453,18 @@ fn test_note_search_by_date_specific() {
 
     // Add notes with specific dates
     db.cmd()
-        .args(&["note", "add", "--date", "2025-01-15", "mid", "january"])
+        .args(["note", "add", "--date", "2025-01-15", "mid", "january"])
         .assert()
         .success();
 
     db.cmd()
-        .args(&["note", "add", "--date", "2025-02-20", "late", "february"])
+        .args(["note", "add", "--date", "2025-02-20", "late", "february"])
         .assert()
         .success();
 
     // Search for specific date
     db.cmd()
-        .args(&["note", "search", "--date", "2025-01-15"])
+        .args(["note", "search", "--date", "2025-01-15"])
         .assert()
         .success()
         .stdout(predicate::str::contains("mid january"))
@@ -476,19 +477,19 @@ fn test_note_search_by_date_past() {
 
     // Add note with yesterday's date
     db.cmd()
-        .args(&["note", "add", "--date", "yesterday", "past", "note"])
+        .args(["note", "add", "--date", "yesterday", "past", "note"])
         .assert()
         .success();
 
     // Add note with tomorrow's date
     db.cmd()
-        .args(&["note", "add", "--date", "tomorrow", "future", "note"])
+        .args(["note", "add", "--date", "tomorrow", "future", "note"])
         .assert()
         .success();
 
     // Search for past notes (should exclude today and future)
     db.cmd()
-        .args(&["note", "search", "--date", "past"])
+        .args(["note", "search", "--date", "past"])
         .assert()
         .success()
         .stdout(predicate::str::contains("past note"))
@@ -501,19 +502,19 @@ fn test_note_search_by_date_future() {
 
     // Add note with yesterday's date
     db.cmd()
-        .args(&["note", "add", "--date", "yesterday", "past", "note"])
+        .args(["note", "add", "--date", "yesterday", "past", "note"])
         .assert()
         .success();
 
     // Add note with tomorrow's date
     db.cmd()
-        .args(&["note", "add", "--date", "tomorrow", "future", "note"])
+        .args(["note", "add", "--date", "tomorrow", "future", "note"])
         .assert()
         .success();
 
     // Search for future notes (should exclude today and past)
     db.cmd()
-        .args(&["note", "search", "--date", "future"])
+        .args(["note", "search", "--date", "future"])
         .assert()
         .success()
         .stdout(predicate::str::contains("future note"))

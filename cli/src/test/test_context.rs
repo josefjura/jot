@@ -1,4 +1,6 @@
 #![allow(clippy::unwrap_used)]
+#![allow(dead_code)]
+#![allow(deprecated)]
 
 use assert_cmd::Command;
 use std::path::{Path, PathBuf};

@@ -57,6 +57,8 @@ pub fn process_sync_request(conn: &Connection, request: SyncRequest) -> Result<S
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used)]
+
     use super::*;
     use crate::db::{create_note, open_db};
     use std::thread;
@@ -65,9 +67,9 @@ mod tests {
 
     #[test]
     fn test_merge_new_note_from_client() {
-        let dir = TempDir::new().expect("Failed to create temp dir");
+        let dir = TempDir::new().unwrap();
         let db_path = dir.path().join("test.db");
-        let conn = open_db(&db_path).expect("Failed to open db");
+        let conn = open_db(&db_path).unwrap();
 
         let client_note = Note {
             id: "01ARZ3NDEKTSV4RRFFQ69G5FAV".to_string(),
@@ -79,28 +81,25 @@ mod tests {
             deleted_at: None,
         };
 
-        let result = merge_notes(&conn, vec![client_note.clone()], 0).expect("Failed to merge");
+        let result = merge_notes(&conn, vec![client_note.clone()], 0).unwrap();
 
         // Should return empty since server has no newer notes
         assert_eq!(result.len(), 0);
 
         // Verify note was inserted
-        let note = get_note_by_id(&conn, &client_note.id)
-            .expect("Failed to get note")
-            .expect("Note not found");
+        let note = get_note_by_id(&conn, &client_note.id).unwrap().unwrap();
 
         assert_eq!(note.content, "client note");
     }
 
     #[test]
     fn test_merge_conflict_last_write_wins() {
-        let dir = TempDir::new().expect("Failed to create temp dir");
+        let dir = TempDir::new().unwrap();
         let db_path = dir.path().join("test.db");
-        let conn = open_db(&db_path).expect("Failed to open db");
+        let conn = open_db(&db_path).unwrap();
 
         // Create server note
-        let note =
-            create_note(&conn, "server version", vec![], None).expect("Failed to create note");
+        let note = create_note(&conn, "server version", vec![], None).unwrap();
 
         thread::sleep(Duration::from_millis(10));
 
@@ -115,15 +114,13 @@ mod tests {
             deleted_at: None,
         };
 
-        let result = merge_notes(&conn, vec![client_note.clone()], 0).expect("Failed to merge");
+        let result = merge_notes(&conn, vec![client_note.clone()], 0).unwrap();
 
         // Server should not send anything back (client version wins)
         assert_eq!(result.len(), 0);
 
         // Verify client version was saved
-        let updated = get_note_by_id(&conn, &note.id)
-            .expect("Failed to get note")
-            .expect("Note not found");
+        let updated = get_note_by_id(&conn, &note.id).unwrap().unwrap();
 
         assert_eq!(updated.content, "client version (newer)");
     }

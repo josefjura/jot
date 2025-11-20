@@ -4,8 +4,9 @@ use std::str::FromStr;
 use chrono::{Days, Local, NaiveDate};
 use serde::{Deserialize, Deserializer, Serialize};
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Default)]
 pub enum DateSource {
+    #[default]
     Today,
     Yesterday,
     Tomorrow,
@@ -51,12 +52,6 @@ impl<'de> Deserialize<'de> for DateSource {
 impl fmt::Display for DateSource {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.to_date().format("%Y-%m-%d"))
-    }
-}
-
-impl Default for DateSource {
-    fn default() -> Self {
-        Self::Today
     }
 }
 

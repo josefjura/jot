@@ -254,24 +254,23 @@ pub fn set_sync_state(conn: &Connection, key: &str, value: &str) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used)]
+
     use super::*;
     use tempfile::TempDir;
 
     #[test]
     fn test_create_and_get_note() {
-        let dir = TempDir::new().expect("Failed to create temp dir");
+        let dir = TempDir::new().unwrap();
         let db_path = dir.path().join("test.db");
-        let conn = open_db(&db_path).expect("Failed to open db");
+        let conn = open_db(&db_path).unwrap();
 
-        let note = create_note(&conn, "test content", vec!["tag1".to_string()], None)
-            .expect("Failed to create note");
+        let note = create_note(&conn, "test content", vec!["tag1".to_string()], None).unwrap();
 
         assert_eq!(note.content, "test content");
         assert_eq!(note.tags, vec!["tag1"]);
 
-        let retrieved = get_note_by_id(&conn, &note.id)
-            .expect("Failed to get note")
-            .expect("Note not found");
+        let retrieved = get_note_by_id(&conn, &note.id).unwrap().unwrap();
 
         assert_eq!(retrieved.id, note.id);
         assert_eq!(retrieved.content, "test content");
@@ -279,38 +278,34 @@ mod tests {
 
     #[test]
     fn test_soft_delete() {
-        let dir = TempDir::new().expect("Failed to create temp dir");
+        let dir = TempDir::new().unwrap();
         let db_path = dir.path().join("test.db");
-        let conn = open_db(&db_path).expect("Failed to open db");
+        let conn = open_db(&db_path).unwrap();
 
-        let note = create_note(&conn, "test", vec![], None).expect("Failed to create note");
+        let note = create_note(&conn, "test", vec![], None).unwrap();
 
-        soft_delete_note(&conn, &note.id).expect("Failed to delete note");
+        soft_delete_note(&conn, &note.id).unwrap();
 
-        let deleted = get_note_by_id(&conn, &note.id)
-            .expect("Failed to get note")
-            .expect("Note not found");
+        let deleted = get_note_by_id(&conn, &note.id).unwrap().unwrap();
 
         assert!(deleted.deleted_at.is_some());
     }
 
     #[test]
     fn test_search_notes() {
-        let dir = TempDir::new().expect("Failed to create temp dir");
+        let dir = TempDir::new().unwrap();
         let db_path = dir.path().join("test.db");
-        let conn = open_db(&db_path).expect("Failed to open db");
+        let conn = open_db(&db_path).unwrap();
 
-        create_note(&conn, "first note", vec!["work".to_string()], None)
-            .expect("Failed to create note");
-        create_note(&conn, "second note", vec!["personal".to_string()], None)
-            .expect("Failed to create note");
+        create_note(&conn, "first note", vec!["work".to_string()], None).unwrap();
+        create_note(&conn, "second note", vec!["personal".to_string()], None).unwrap();
 
         let query = SearchQuery {
             text: Some("first".to_string()),
             ..Default::default()
         };
 
-        let results = search_notes(&conn, &query).expect("Failed to search");
+        let results = search_notes(&conn, &query).unwrap();
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].content, "first note");
     }
