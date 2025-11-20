@@ -39,8 +39,11 @@ impl TestDb {
 
         // Create a minimal profile config
         let profile_config_path = profile_config_dir.join(format!("{}.toml", profile_name));
-        let profile_content = format!("db_path = \"{}\"", db_path.to_str().unwrap());
-        std::fs::write(&profile_config_path, profile_content).unwrap();
+        let profile = crate::profile::Profile {
+            db_path: Some(db_path.to_str().unwrap().to_string()),
+            default_tags: vec![],
+        };
+        profile.save(&profile_config_path).unwrap();
 
         Self {
             _temp_dir: temp_dir,
