@@ -58,6 +58,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 clap_complete::generate(shell, &mut cmd, "jot", &mut std::io::stdout());
             }
         }
+    } else {
+        // No command provided, print help
+        use clap::CommandFactory;
+        CliArgs::command().print_help()?;
     }
 
     Ok(())

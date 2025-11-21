@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Running `jot` with no arguments now displays help message instead of doing nothing
+
 ## [0.2.1] - 2025-11-21
 
 ### Added
