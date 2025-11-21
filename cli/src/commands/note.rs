@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::{collections::HashMap, path::Path};
 
 use jot_core::SearchQuery;
 
@@ -8,6 +8,7 @@ use crate::{
     db::LocalDb,
     editor::Editor,
     formatters::NoteSearchFormatter,
+    prune::{self, PruneAction},
 };
 
 const TEMPLATE: &str = r#"tags = ["work", "important"]
@@ -186,6 +187,70 @@ pub fn note_cmd(
                     db.soft_delete_note(id)?;
                     println!("Deleted note {}", id);
                 }
+            }
+        }
+        NoteCommand::Prune(args) => {
+            // Build search query based on args
+            let limit = if args.all { None } else { Some(args.limit) };
+
+            let (date_from, date_to) = args
+                .date
+                .as_ref()
+                .map(|d| {
+                    let (from, to) = d.to_date_range();
+                    (
+                        from.map(|d| d.format("%Y-%m-%d").to_string()),
+                        to.map(|d| d.format("%Y-%m-%d").to_string()),
+                    )
+                })
+                .unwrap_or((None, None));
+
+            let query = SearchQuery {
+                text: args.term,
+                tags: args.tag,
+                date_from,
+                date_to,
+                include_deleted: false,
+                limit: limit.map(|l| l as usize),
+            };
+
+            // Get notes to prune
+            let notes = db.search_notes(&query)?;
+
+            if notes.is_empty() {
+                println!("No notes found matching the criteria.");
+                return Ok(());
+            }
+
+            // Generate prune file content
+            let prune_content = prune::generate_prune_file(&notes);
+
+            // Open editor
+            let edited_content = prune::open_prune_editor(&prune_content)?;
+
+            // Parse decisions
+            let decisions = prune::parse_prune_file(&edited_content)?;
+
+            // Create a map of note IDs to notes for quick lookup
+            let note_map: HashMap<String, _> =
+                notes.iter().map(|note| (note.id.clone(), note)).collect();
+
+            // Collect notes to delete
+            let notes_to_delete: Vec<_> = decisions
+                .iter()
+                .filter(|d| d.action == PruneAction::Delete)
+                .filter_map(|d| note_map.get(&d.note_id).copied())
+                .collect();
+
+            // Show summary and confirm
+            if prune::confirm_deletions(&notes_to_delete)? {
+                // Delete the notes
+                for note in &notes_to_delete {
+                    db.soft_delete_note(&note.id)?;
+                }
+                println!("Deleted {} note(s).", notes_to_delete.len());
+            } else {
+                println!("Aborted. No notes were deleted.");
             }
         }
     };

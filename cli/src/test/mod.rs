@@ -15,7 +15,7 @@ pub mod test_context;
 #[test]
 fn test_profile_arg() {
     // Test that --profile arg overrides JOT_PROFILE env var
-    let mut cmd = Command::cargo_bin("jot-cli").unwrap();
+    let mut cmd = Command::cargo_bin("jot").unwrap();
 
     let assert = cmd
         .env("JOT_PROFILE", "wrong_profile")
@@ -32,7 +32,7 @@ fn test_profile_arg() {
 #[test]
 fn test_profile_env() {
     // Test that JOT_PROFILE env var sets the profile name
-    let mut cmd = Command::cargo_bin("jot-cli").unwrap();
+    let mut cmd = Command::cargo_bin("jot").unwrap();
 
     let assert = cmd
         .env("JOT_PROFILE", "test_profile_env")

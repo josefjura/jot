@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1] - 2025-11-21
+
+### Added
+- Interactive note cleanup with `jot note prune` command
+  - Git-rebase-style editor interface for batch note deletion
+  - Supports filtering by tags, dates, and search terms
+  - Default limit of 20 notes, configurable with `-n` or `--all`
+  - Always requires confirmation before deletion
+  - Shows first line preview of each note (truncated at 80 chars)
+
+## [0.2.0] - Previous Release
+
 ### Added
 - Profile system for isolated note databases
 - Search and filtering with multiple output formats (pretty/plain/json/id)
@@ -29,5 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Initial prototype version.
 
-[Unreleased]: https://github.com/josefjura/jot/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/josefjura/jot/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/josefjura/jot/compare/v0.2.0...v0.2.1
+[0.2.0]: https://github.com/josefjura/jot/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/josefjura/jot/releases/tag/v0.1.0

@@ -27,7 +27,7 @@ impl TestContext {
     }
 
     pub fn command(&self) -> Command {
-        let mut cmd = Command::cargo_bin("jot-cli").unwrap();
+        let mut cmd = Command::cargo_bin("jot").unwrap();
         cmd.env("JOT_PROFILE", self.config_path.to_str().unwrap());
         cmd
     }

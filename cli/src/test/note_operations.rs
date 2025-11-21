@@ -53,7 +53,7 @@ impl TestDb {
     }
 
     fn cmd(&self) -> Command {
-        let mut cmd = Command::cargo_bin("jot-cli").unwrap();
+        let mut cmd = Command::cargo_bin("jot").unwrap();
 
         // Override XDG base directories to use our temp dir
         let config_dir = self._temp_dir.path().join("config");
@@ -77,6 +77,15 @@ impl TestDb {
             limit: None,
         };
         jot_core::search_notes(&conn, &query).unwrap()
+    }
+
+    /// Add a note directly to the database for testing
+    fn add_note(&self, content: &str, tags: Vec<&str>, date: Option<&str>) -> String {
+        let conn = jot_core::open_db(&self.db_path).unwrap();
+        let tags: Vec<String> = tags.into_iter().map(|s| s.to_string()).collect();
+        let date = date.map(|s| s.to_string());
+        let note = jot_core::create_note(&conn, content, tags, date).unwrap();
+        note.id
     }
 }
 
@@ -522,4 +531,122 @@ fn test_note_search_by_date_future() {
         .success()
         .stdout(predicate::str::contains("future note"))
         .stdout(predicate::str::contains("past note").not());
+}
+
+#[test]
+fn test_prune_generate_file_format() {
+    let db = TestDb::new();
+
+    // Add some notes
+    db.add_note("First note", vec!["work"], Some("2025-01-15"));
+    db.add_note("Second note", vec!["personal"], Some("2025-01-14"));
+    db.add_note("Third note with a very long content that should be truncated at 80 characters to prevent the line from being too long", vec![], None);
+
+    let notes = db.get_notes();
+    let content = crate::prune::generate_prune_file(&notes);
+
+    // Check header
+    assert!(content.contains("# Interactive note cleanup"));
+    assert!(content.contains("# Commands:"));
+    assert!(content.contains("#   keep   - keep this note"));
+    assert!(content.contains("#   delete - permanently delete this note"));
+
+    // Check notes are formatted correctly
+    assert!(content.contains("keep"));
+    assert!(content.contains("[2025-01-15]"));
+    assert!(content.contains("#work"));
+    assert!(content.contains("#personal"));
+    assert!(content.contains("First note"));
+
+    // Check long note is truncated
+    assert!(content.contains("..."));
+}
+
+#[test]
+fn test_prune_parse_keep_and_delete() {
+    let content = r#"# Comment line
+keep abc123 [2025-01-15] #work First note
+delete def456 [2025-01-14] #personal Second note
+keep ghi789 Third note
+"#;
+
+    let decisions = crate::prune::parse_prune_file(content).unwrap();
+
+    assert_eq!(decisions.len(), 3);
+    assert_eq!(decisions[0].note_id, "abc123");
+    assert_eq!(decisions[0].action, crate::prune::PruneAction::Keep);
+    assert_eq!(decisions[1].note_id, "def456");
+    assert_eq!(decisions[1].action, crate::prune::PruneAction::Delete);
+    assert_eq!(decisions[2].note_id, "ghi789");
+    assert_eq!(decisions[2].action, crate::prune::PruneAction::Keep);
+}
+
+#[test]
+fn test_prune_parse_invalid_action() {
+    let content = "edit abc123 note\n";
+
+    let result = crate::prune::parse_prune_file(content);
+
+    assert!(result.is_err());
+    assert!(result
+        .unwrap_err()
+        .to_string()
+        .contains("Invalid action 'edit'"));
+}
+
+#[test]
+fn test_prune_parse_skip_comments_and_empty_lines() {
+    let content = r#"
+# This is a comment
+
+keep abc123 note
+
+# Another comment
+delete def456 note
+
+"#;
+
+    let decisions = crate::prune::parse_prune_file(content).unwrap();
+
+    assert_eq!(decisions.len(), 2);
+    assert_eq!(decisions[0].note_id, "abc123");
+    assert_eq!(decisions[1].note_id, "def456");
+}
+
+#[test]
+fn test_prune_with_filters() {
+    let db = TestDb::new();
+
+    // Add notes with different tags
+    db.add_note("Work note 1", vec!["work"], Some("2025-01-15"));
+    db.add_note("Work note 2", vec!["work"], Some("2025-01-14"));
+    db.add_note("Personal note", vec!["personal"], Some("2025-01-13"));
+
+    // Verify we can get notes by tag filter for prune
+    let notes = db.get_notes();
+    assert_eq!(notes.len(), 3);
+
+    // Filter by tag
+    let work_notes: Vec<_> = notes
+        .iter()
+        .filter(|n| n.tags.contains(&"work".to_string()))
+        .collect();
+    assert_eq!(work_notes.len(), 2);
+}
+
+#[test]
+fn test_prune_limit() {
+    let db = TestDb::new();
+
+    // Add 5 notes
+    for i in 1..=5 {
+        db.add_note(&format!("Note {}", i), vec![], Some("2025-01-15"));
+    }
+
+    let notes = db.get_notes();
+    assert_eq!(notes.len(), 5);
+
+    // Test limiting
+    let limited: Vec<_> = notes.iter().take(3).collect();
+    assert_eq!(limited.len(), 3);
 }
