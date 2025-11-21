@@ -53,6 +53,8 @@ impl LocalDb {
             tags: vec![],
             date_from: None,
             date_to: None,
+            created_from: None,
+            created_to: None,
             include_deleted: false,
             limit: None,
         };

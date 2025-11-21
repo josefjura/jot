@@ -42,6 +42,8 @@ pub enum Command {
     /// Search notes. Alias for 'note search'.
     #[clap(name = "ls")]
     List(NoteSearchArgs),
+    /// Show a note with full details. Alias for 'note show'.
+    Show(NoteShowArgs),
     /// Generate shell completion scripts
     Completion {
         /// Shell type
@@ -70,6 +72,8 @@ pub enum NoteCommand {
     /// Get latest note.
     #[clap(visible_alias = "latest")]
     Last(NoteLatestArgs),
+    /// Show a note with full details.
+    Show(NoteShowArgs),
     /// Edit a note.
     Edit(NoteEditArgs),
     /// Delete a note (soft delete).
@@ -170,6 +174,17 @@ pub fn parse_date_target(s: &str) -> anyhow::Result<DateTarget> {
 
 pub fn parse_date_source(s: &str) -> anyhow::Result<DateSource> {
     s.parse()
+}
+
+#[derive(Debug, Args, Serialize, PartialEq)]
+pub struct NoteShowArgs {
+    /// Note ID to show (if not provided, shows the most recent note)
+    #[arg(value_name = "ID")]
+    pub id: Option<String>,
+
+    /// Output format (pretty, plain, or json)
+    #[arg(long, value_enum, default_value_t = OutputFormat::Pretty)]
+    pub output: OutputFormat,
 }
 
 #[derive(Debug, Args, Serialize, PartialEq)]

@@ -73,6 +73,8 @@ impl TestDb {
             tags: vec![],
             date_from: None,
             date_to: None,
+            created_from: None,
+            created_to: None,
             include_deleted: false,
             limit: None,
         };
@@ -138,7 +140,7 @@ fn test_note_add_with_date() {
 
     let notes = db.get_notes();
     assert_eq!(notes.len(), 1);
-    assert_eq!(notes[0].date, Some("2025-01-15".to_string()));
+    assert_eq!(notes[0].subject_date, Some("2025-01-15".to_string()));
 }
 
 #[test]
@@ -649,4 +651,184 @@ fn test_prune_limit() {
     // Test limiting
     let limited: Vec<_> = notes.iter().take(3).collect();
     assert_eq!(limited.len(), 3);
+}
+
+#[test]
+fn test_note_show_latest() {
+    let db = TestDb::new();
+
+    // Add a note
+    db.cmd()
+        .args(["note", "add", "Test note for show"])
+        .assert()
+        .success();
+
+    // Show latest note (no ID specified)
+    db.cmd()
+        .args(["note", "show"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Test note for show"))
+        .stdout(predicate::str::contains("Note:"))
+        .stdout(predicate::str::contains("Created:"))
+        .stdout(predicate::str::contains("Updated:"));
+}
+
+#[test]
+fn test_note_show_by_id() {
+    let db = TestDb::new();
+
+    // Add a note
+    db.cmd()
+        .args(["note", "add", "First note"])
+        .assert()
+        .success();
+
+    db.cmd()
+        .args(["note", "add", "Second note"])
+        .assert()
+        .success();
+
+    let notes = db.get_notes();
+    assert_eq!(notes.len(), 2);
+    let first_id = &notes[1].id; // Reverse order, so index 1 is first note
+
+    // Show specific note by ID
+    db.cmd()
+        .args(["note", "show", first_id])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("First note"))
+        .stdout(predicate::str::contains(first_id));
+}
+
+#[test]
+fn test_note_show_with_tags() {
+    let db = TestDb::new();
+
+    // Add a note with tags
+    db.cmd()
+        .args(["note", "add", "-t", "work,urgent", "Tagged note"])
+        .assert()
+        .success();
+
+    // Show note and verify tags are displayed
+    db.cmd()
+        .args(["note", "show"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Tagged note"))
+        .stdout(predicate::str::contains("Tags:"))
+        .stdout(predicate::str::contains("work"))
+        .stdout(predicate::str::contains("urgent"));
+}
+
+#[test]
+fn test_note_show_json_output() {
+    let db = TestDb::new();
+
+    // Add a note
+    db.cmd()
+        .args(["note", "add", "JSON test note"])
+        .assert()
+        .success();
+
+    // Show as JSON
+    let output = db
+        .cmd()
+        .args(["note", "show", "--output", "json"])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+
+    let json_str = String::from_utf8(output).unwrap();
+    let note: serde_json::Value = serde_json::from_str(&json_str).unwrap();
+
+    assert_eq!(note["content"], "JSON test note");
+    assert!(note["id"].is_string());
+    assert!(note["created_at"].is_number());
+}
+
+#[test]
+fn test_note_show_plain_output() {
+    let db = TestDb::new();
+
+    // Add a note
+    db.cmd()
+        .args(["note", "add", "Plain output test"])
+        .assert()
+        .success();
+
+    // Show as plain
+    db.cmd()
+        .args(["note", "show", "--output", "plain"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("ID:"))
+        .stdout(predicate::str::contains("Plain output test"));
+}
+
+#[test]
+fn test_note_show_id_output() {
+    let db = TestDb::new();
+
+    // Add a note
+    db.cmd()
+        .args(["note", "add", "ID output test"])
+        .assert()
+        .success();
+
+    let notes = db.get_notes();
+    let note_id = &notes[0].id;
+
+    // Show as ID only
+    db.cmd()
+        .args(["note", "show", "--output", "id"])
+        .assert()
+        .success()
+        .stdout(predicate::str::is_match(format!("^{}\\s*$", note_id)).unwrap());
+}
+
+#[test]
+fn test_note_show_nonexistent() {
+    let db = TestDb::new();
+
+    // Try to show non-existent note
+    db.cmd()
+        .args(["note", "show", "01NONEXISTENT00000000000"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("not found"));
+}
+
+#[test]
+fn test_note_show_no_notes() {
+    let db = TestDb::new();
+
+    // Try to show when no notes exist
+    db.cmd()
+        .args(["note", "show"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("No notes found"));
+}
+
+#[test]
+fn test_show_alias() {
+    let db = TestDb::new();
+
+    // Add a note
+    db.cmd()
+        .args(["note", "add", "Test for alias"])
+        .assert()
+        .success();
+
+    // Use top-level 'show' alias
+    db.cmd()
+        .args(["show"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Test for alias"));
 }

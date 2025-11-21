@@ -9,8 +9,8 @@ pub struct Note {
     pub content: String,
     /// Tags as array
     pub tags: Vec<String>,
-    /// Optional date in ISO 8601 format (YYYY-MM-DD)
-    pub date: Option<String>,
+    /// Optional subject date - what date this note is about (YYYY-MM-DD)
+    pub subject_date: Option<String>,
     /// Unix timestamp in milliseconds
     pub created_at: i64,
     /// Unix timestamp in milliseconds
@@ -26,10 +26,14 @@ pub struct SearchQuery {
     pub text: Option<String>,
     /// Filter by tags (must have all specified tags)
     pub tags: Vec<String>,
-    /// Filter by date range (inclusive start)
+    /// Filter by subject_date range (inclusive start)
     pub date_from: Option<String>,
-    /// Filter by date range (inclusive end)
+    /// Filter by subject_date range (inclusive end)
     pub date_to: Option<String>,
+    /// Filter by created_at range (inclusive start, ISO date string)
+    pub created_from: Option<String>,
+    /// Filter by created_at range (inclusive end, ISO date string)
+    pub created_to: Option<String>,
     /// Include soft-deleted notes
     pub include_deleted: bool,
     /// Limit number of results

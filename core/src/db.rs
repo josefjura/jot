@@ -23,7 +23,7 @@ pub fn create_note(
         .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
 
     conn.execute(
-        "INSERT INTO notes (id, content, tags, date, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+        "INSERT INTO notes (id, content, tags, subject_date, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
         params![id, content, tags_json, date, now, now],
     )?;
 
@@ -31,7 +31,7 @@ pub fn create_note(
         id,
         content: content.to_string(),
         tags,
-        date,
+        subject_date: date,
         created_at: now,
         updated_at: now,
         deleted_at: None,
@@ -41,7 +41,7 @@ pub fn create_note(
 /// Get a note by ID
 pub fn get_note_by_id(conn: &Connection, id: &str) -> Result<Option<Note>> {
     let mut stmt = conn.prepare(
-        "SELECT id, content, tags, date, created_at, updated_at, deleted_at FROM notes WHERE id = ?1"
+        "SELECT id, content, tags, subject_date, created_at, updated_at, deleted_at FROM notes WHERE id = ?1"
     )?;
 
     let note = stmt.query_row(params![id], |row| {
@@ -54,7 +54,7 @@ pub fn get_note_by_id(conn: &Connection, id: &str) -> Result<Option<Note>> {
             id: row.get(0)?,
             content: row.get(1)?,
             tags,
-            date: row.get(3)?,
+            subject_date: row.get(3)?,
             created_at: row.get(4)?,
             updated_at: row.get(5)?,
             deleted_at: row.get(6)?,
@@ -71,7 +71,7 @@ pub fn get_note_by_id(conn: &Connection, id: &str) -> Result<Option<Note>> {
 /// Search notes with various filters
 pub fn search_notes(conn: &Connection, query: &SearchQuery) -> Result<Vec<Note>> {
     let mut sql = String::from(
-        "SELECT id, content, tags, date, created_at, updated_at, deleted_at FROM notes WHERE 1=1",
+        "SELECT id, content, tags, subject_date, created_at, updated_at, deleted_at FROM notes WHERE 1=1",
     );
     let mut params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
 
@@ -86,15 +86,40 @@ pub fn search_notes(conn: &Connection, query: &SearchQuery) -> Result<Vec<Note>>
         params.push(Box::new(format!("%{}%", text)));
     }
 
-    // Date range filters
+    // Subject date range filters
     if let Some(ref date_from) = query.date_from {
-        sql.push_str(" AND date >= ?");
+        sql.push_str(" AND subject_date >= ?");
         params.push(Box::new(date_from.clone()));
     }
 
     if let Some(ref date_to) = query.date_to {
-        sql.push_str(" AND date <= ?");
+        sql.push_str(" AND subject_date <= ?");
         params.push(Box::new(date_to.clone()));
+    }
+
+    // Created at range filters (convert ISO date strings to milliseconds)
+    if let Some(ref created_from) = query.created_from {
+        // Parse ISO date and convert to start of day timestamp in milliseconds
+        if let Ok(date) = chrono::NaiveDate::parse_from_str(created_from, "%Y-%m-%d") {
+            let timestamp = date
+                .and_hms_opt(0, 0, 0)
+                .map(|dt| dt.and_utc().timestamp_millis())
+                .unwrap_or(0);
+            sql.push_str(" AND created_at >= ?");
+            params.push(Box::new(timestamp));
+        }
+    }
+
+    if let Some(ref created_to) = query.created_to {
+        // Parse ISO date and convert to end of day timestamp in milliseconds
+        if let Ok(date) = chrono::NaiveDate::parse_from_str(created_to, "%Y-%m-%d") {
+            let timestamp = date
+                .and_hms_opt(23, 59, 59)
+                .map(|dt| dt.and_utc().timestamp_millis())
+                .unwrap_or(0);
+            sql.push_str(" AND created_at <= ?");
+            params.push(Box::new(timestamp));
+        }
     }
 
     // Tag filters
@@ -103,8 +128,9 @@ pub fn search_notes(conn: &Connection, query: &SearchQuery) -> Result<Vec<Note>>
         params.push(Box::new(format!("%\"{}%", tag)));
     }
 
-    // Order by updated_at descending (most recent first)
-    sql.push_str(" ORDER BY updated_at DESC");
+    // Order by subject_date (or created_at as fallback), then created_at
+    // COALESCE returns first non-NULL value
+    sql.push_str(" ORDER BY COALESCE(subject_date, DATE(created_at/1000, 'unixepoch')) DESC, created_at DESC");
 
     // Limit
     if let Some(limit) = query.limit {
@@ -124,7 +150,7 @@ pub fn search_notes(conn: &Connection, query: &SearchQuery) -> Result<Vec<Note>>
             id: row.get(0)?,
             content: row.get(1)?,
             tags,
-            date: row.get(3)?,
+            subject_date: row.get(3)?,
             created_at: row.get(4)?,
             updated_at: row.get(5)?,
             deleted_at: row.get(6)?,
@@ -152,7 +178,7 @@ pub fn update_note(
         .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
 
     conn.execute(
-        "UPDATE notes SET content = ?1, tags = ?2, date = ?3, updated_at = ?4 WHERE id = ?5",
+        "UPDATE notes SET content = ?1, tags = ?2, subject_date = ?3, updated_at = ?4 WHERE id = ?5",
         params![content, tags_json, date, now, id],
     )?;
 
@@ -174,7 +200,7 @@ pub fn soft_delete_note(conn: &Connection, id: &str) -> Result<()> {
 /// Get all notes updated since a specific timestamp (for sync)
 pub fn get_notes_since(conn: &Connection, timestamp: i64) -> Result<Vec<Note>> {
     let mut stmt = conn.prepare(
-        "SELECT id, content, tags, date, created_at, updated_at, deleted_at
+        "SELECT id, content, tags, subject_date, created_at, updated_at, deleted_at
          FROM notes
          WHERE updated_at > ?1
          ORDER BY updated_at ASC",
@@ -190,7 +216,7 @@ pub fn get_notes_since(conn: &Connection, timestamp: i64) -> Result<Vec<Note>> {
             id: row.get(0)?,
             content: row.get(1)?,
             tags,
-            date: row.get(3)?,
+            subject_date: row.get(3)?,
             created_at: row.get(4)?,
             updated_at: row.get(5)?,
             deleted_at: row.get(6)?,
@@ -215,15 +241,15 @@ pub fn upsert_note(conn: &Connection, note: &Note) -> Result<()> {
         // Only update if incoming note is newer
         if note.updated_at > existing.updated_at {
             conn.execute(
-                "UPDATE notes SET content = ?1, tags = ?2, date = ?3, created_at = ?4, updated_at = ?5, deleted_at = ?6 WHERE id = ?7",
-                params![note.content, tags_json, note.date, note.created_at, note.updated_at, note.deleted_at, note.id],
+                "UPDATE notes SET content = ?1, tags = ?2, subject_date = ?3, created_at = ?4, updated_at = ?5, deleted_at = ?6 WHERE id = ?7",
+                params![note.content, tags_json, note.subject_date, note.created_at, note.updated_at, note.deleted_at, note.id],
             )?;
         }
     } else {
         // Insert new note
         conn.execute(
-            "INSERT INTO notes (id, content, tags, date, created_at, updated_at, deleted_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
-            params![note.id, note.content, tags_json, note.date, note.created_at, note.updated_at, note.deleted_at],
+            "INSERT INTO notes (id, content, tags, subject_date, created_at, updated_at, deleted_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            params![note.id, note.content, tags_json, note.subject_date, note.created_at, note.updated_at, note.deleted_at],
         )?;
     }
 
