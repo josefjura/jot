@@ -32,7 +32,7 @@ pub fn generate_prune_file(notes: &[Note]) -> String {
     // Add each note as a single line with preview
     for note in notes {
         let date_str = note
-            .date
+            .subject_date
             .as_ref()
             .map(|d| format!("[{}]", d))
             .unwrap_or_else(|| String::from(""));
@@ -167,7 +167,7 @@ pub fn confirm_deletions(notes_to_delete: &[&Note]) -> Result<bool> {
 
     for note in notes_to_delete {
         let date_str = note
-            .date
+            .subject_date
             .as_ref()
             .map(|d| format!("[{}]", d))
             .unwrap_or_else(|| String::from(""));
@@ -223,7 +223,7 @@ mod tests {
             id: id.to_string(),
             content: content.to_string(),
             tags: tags.into_iter().map(|t| t.to_string()).collect(),
-            date: date.map(|d| d.to_string()),
+            subject_date: date.map(|d| d.to_string()),
             created_at: 0,
             updated_at: 0,
             deleted_at: None,

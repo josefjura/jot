@@ -1,4 +1,4 @@
-use crate::args::{NoteSearchArgs, OutputFormat};
+use crate::args::{NoteSearchArgs, NoteShowArgs, OutputFormat};
 use jot_core::Note;
 use std::io::{self, Write};
 use termcolor::{BufferWriter, Color, ColorChoice, ColorSpec, WriteColor};
@@ -85,8 +85,8 @@ impl NoteSearchFormatter {
 
         writeln!(buffer, "\u{1F4CB} {}", &note.id[..8])?; // Show first 8 chars of ULID
 
-        // Show note date if present
-        if let Some(ref date) = note.date {
+        // Show note subject date if present
+        if let Some(ref date) = note.subject_date {
             writeln!(buffer, "\u{1F4C5} {}", date)?;
         }
 
@@ -105,8 +105,8 @@ impl NoteSearchFormatter {
 
         metadata.push(note.id[..8].to_string()); // Show first 8 chars of ULID
 
-        // Show note date if present
-        if let Some(ref date) = note.date {
+        // Show note subject date if present
+        if let Some(ref date) = note.subject_date {
             metadata.push(format!("[{}]", date));
         }
 
@@ -182,4 +182,139 @@ fn test_note_search_formatter_create_preview_two_lines() {
     );
 
     assert_eq!(formatter.create_preview("One\nTwo"), "One\nTwo");
+}
+
+pub struct NoteShowFormatter {
+    output: OutputFormat,
+    writer: BufferWriter,
+}
+
+impl NoteShowFormatter {
+    pub fn new(args: &NoteShowArgs) -> Self {
+        let color_choice = match args.output {
+            OutputFormat::Plain => ColorChoice::Never,
+            OutputFormat::Json => ColorChoice::Never,
+            OutputFormat::Id => ColorChoice::Never,
+            OutputFormat::Pretty => ColorChoice::Auto,
+        };
+
+        Self {
+            output: args.output.clone(),
+            writer: BufferWriter::stdout(color_choice),
+        }
+    }
+
+    pub fn print_note(&mut self, note: &Note) -> io::Result<()> {
+        let mut buffer = self.writer.buffer();
+
+        match self.output {
+            OutputFormat::Json => {
+                let json = serde_json::to_string_pretty(note).map_err(io::Error::other)?;
+                writeln!(buffer, "{}", json)?;
+            }
+            OutputFormat::Id => {
+                writeln!(buffer, "{}", note.id)?;
+            }
+            OutputFormat::Pretty => {
+                self.print_pretty(&mut buffer, note)?;
+            }
+            OutputFormat::Plain => {
+                self.print_plain(&mut buffer, note)?;
+            }
+        }
+
+        self.writer.print(&buffer)?;
+        Ok(())
+    }
+
+    fn print_pretty(&self, buffer: &mut termcolor::Buffer, note: &Note) -> io::Result<()> {
+        // Header with ID
+        buffer.set_color(ColorSpec::new().set_fg(Some(Color::Cyan)).set_bold(true))?;
+        writeln!(buffer, "Note: {}", note.id)?;
+        buffer.reset()?;
+
+        // Metadata section
+        buffer.set_color(ColorSpec::new().set_fg(Some(Color::Cyan)))?;
+
+        // Subject Date
+        if let Some(ref date) = note.subject_date {
+            write!(buffer, "Date:       ")?;
+            buffer.reset()?;
+            writeln!(buffer, "{}", date)?;
+            buffer.set_color(ColorSpec::new().set_fg(Some(Color::Cyan)))?;
+        }
+
+        // Tags
+        if !note.tags.is_empty() {
+            write!(buffer, "Tags:       ")?;
+            buffer.reset()?;
+            writeln!(buffer, "{}", note.tags.join(", "))?;
+            buffer.set_color(ColorSpec::new().set_fg(Some(Color::Cyan)))?;
+        }
+
+        // Created at
+        write!(buffer, "Created:    ")?;
+        buffer.reset()?;
+        writeln!(buffer, "{}", format_timestamp(note.created_at))?;
+        buffer.set_color(ColorSpec::new().set_fg(Some(Color::Cyan)))?;
+
+        // Updated at
+        write!(buffer, "Updated:    ")?;
+        buffer.reset()?;
+        writeln!(buffer, "{}", format_timestamp(note.updated_at))?;
+
+        // Deleted at (if soft deleted)
+        if let Some(deleted_at) = note.deleted_at {
+            buffer.set_color(ColorSpec::new().set_fg(Some(Color::Red)).set_bold(true))?;
+            write!(buffer, "Deleted:    ")?;
+            buffer.reset()?;
+            writeln!(buffer, "{}", format_timestamp(deleted_at))?;
+        }
+
+        buffer.reset()?;
+
+        // Separator
+        writeln!(buffer)?;
+
+        // Content
+        writeln!(buffer, "{}", note.content)?;
+
+        Ok(())
+    }
+
+    fn print_plain(&self, buffer: &mut termcolor::Buffer, note: &Note) -> io::Result<()> {
+        writeln!(buffer, "ID: {}", note.id)?;
+
+        if let Some(ref date) = note.subject_date {
+            writeln!(buffer, "Date: {}", date)?;
+        }
+
+        if !note.tags.is_empty() {
+            writeln!(buffer, "Tags: {}", note.tags.join(", "))?;
+        }
+
+        writeln!(buffer, "Created: {}", format_timestamp(note.created_at))?;
+        writeln!(buffer, "Updated: {}", format_timestamp(note.updated_at))?;
+
+        if let Some(deleted_at) = note.deleted_at {
+            writeln!(buffer, "Deleted: {}", format_timestamp(deleted_at))?;
+        }
+
+        writeln!(buffer)?;
+        writeln!(buffer, "{}", note.content)?;
+
+        Ok(())
+    }
+}
+
+fn format_timestamp(timestamp_ms: i64) -> String {
+    use chrono::{DateTime, Local, TimeZone};
+
+    let datetime = Local
+        .timestamp_millis_opt(timestamp_ms)
+        .single()
+        .map(|dt: DateTime<Local>| dt.format("%Y-%m-%d %H:%M:%S").to_string())
+        .unwrap_or_else(|| "Invalid timestamp".to_string());
+
+    datetime
 }

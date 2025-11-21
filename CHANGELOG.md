@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `jot show` command to display a note with full details
+  - Shows complete note ID, timestamps, tags, date, and full content
+  - Supports all output formats: pretty (default), plain, json, id
+  - Can show specific note by ID or latest note (default)
+  - Available as `jot show [ID]` or `jot note show [ID]`
+  - Displays human-readable timestamps (e.g., "2025-11-21 16:58:19")
+
+### Changed
+- **BREAKING**: Renamed internal `date` field to `subject_date` for clarity
+  - The date field now semantically represents "what date this note is about" rather than when it was created
+  - Database automatically migrates from v1 to v2 schema on first run
+  - Search ordering now uses subject_date with created_at as fallback: notes are ordered by their subject date (or creation date if no subject date is set)
+  - Added database versioning system using SQLite's `PRAGMA user_version`
+  - API change: `Note.date` → `Note.subject_date` in all code
+
 ### Fixed
 - Running `jot` with no arguments now displays help message instead of doing nothing
 

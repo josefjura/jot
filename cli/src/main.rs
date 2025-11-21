@@ -52,6 +52,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let db_path = std::path::Path::new(&config.db_path);
                 note_cmd(db_path, args::NoteCommand::Search(args), &config)?;
             }
+            Command::Show(args) => {
+                let db_path = std::path::Path::new(&config.db_path);
+                note_cmd(db_path, args::NoteCommand::Show(args), &config)?;
+            }
             Command::Completion { shell } => {
                 use clap::CommandFactory;
                 let mut cmd = args::CliArgs::command();

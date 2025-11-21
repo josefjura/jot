@@ -7,7 +7,7 @@ use crate::{
     args::{NoteCommand, NoteSearchArgs},
     db::LocalDb,
     editor::Editor,
-    formatters::NoteSearchFormatter,
+    formatters::{NoteSearchFormatter, NoteShowFormatter},
     prune::{self, PruneAction},
 };
 
@@ -84,6 +84,36 @@ pub fn note_cmd(
                 .print_notes(&notes)
                 .map_err(|e| anyhow::anyhow!("Error while formatting notes: {}", e))?;
         }
+        NoteCommand::Show(args) => {
+            // Get the note to show
+            let note = if let Some(ref id) = args.id {
+                // Show specific note by ID
+                db.get_note_by_id(id)?
+                    .ok_or_else(|| anyhow::anyhow!("Note with ID '{}' not found", id))?
+            } else {
+                // Show most recent note
+                let query = SearchQuery {
+                    text: None,
+                    tags: vec![],
+                    date_from: None,
+                    date_to: None,
+                    created_from: None,
+                    created_to: None,
+                    include_deleted: false,
+                    limit: Some(1),
+                };
+                let notes = db.search_notes(&query)?;
+                notes
+                    .into_iter()
+                    .next()
+                    .ok_or_else(|| anyhow::anyhow!("No notes found to show"))?
+            };
+
+            let mut formatter = NoteShowFormatter::new(&args);
+            formatter
+                .print_note(&note)
+                .map_err(|e| anyhow::anyhow!("Error while formatting note: {}", e))?;
+        }
         NoteCommand::Edit(args) => {
             // Get the note to edit
             let note = if let Some(id) = args.id {
@@ -97,6 +127,8 @@ pub fn note_cmd(
                     tags: vec![],
                     date_from: None,
                     date_to: None,
+                    created_from: None,
+                    created_to: None,
                     include_deleted: false,
                     limit: Some(1),
                 };
@@ -114,7 +146,7 @@ pub fn note_cmd(
                 .map(|t| format!("\"{}\"", t))
                 .collect::<Vec<_>>()
                 .join(", ");
-            let date_str = note.date.as_deref().unwrap_or("today");
+            let date_str = note.subject_date.as_deref().unwrap_or("today");
 
             let template = format!(
                 "tags = [{}]\ndate = \"{}\"\n+++\n{}",
@@ -142,6 +174,8 @@ pub fn note_cmd(
                     tags: vec![],
                     date_from: None,
                     date_to: None,
+                    created_from: None,
+                    created_to: None,
                     include_deleted: false,
                     limit: Some(1),
                 };
@@ -210,6 +244,8 @@ pub fn note_cmd(
                 tags: args.tag,
                 date_from,
                 date_to,
+                created_from: None,
+                created_to: None,
                 include_deleted: false,
                 limit: limit.map(|l| l as usize),
             };
@@ -271,11 +307,14 @@ fn build_search_query(args: &NoteSearchArgs) -> SearchQuery {
         })
         .unwrap_or((None, None));
 
+    // TODO: Add created_from and created_to from args when --created flag is implemented
     SearchQuery {
         text: args.term.clone(),
         tags: args.tag.clone(),
         date_from,
         date_to,
+        created_from: None,
+        created_to: None,
         include_deleted: false,
         limit: args.limit.map(|l| l as usize),
     }
