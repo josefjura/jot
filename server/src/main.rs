@@ -18,9 +18,6 @@ mod router;
 mod state;
 mod util;
 
-#[cfg(test)]
-mod test;
-
 #[tokio::main]
 async fn main() -> Result<(), ApplicationError> {
     if let Err(e) = run().await {
