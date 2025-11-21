@@ -85,8 +85,20 @@ jobs:
             exit 0
           fi
 
-          # Get server version
+          # Check if any server files were actually changed
           git fetch origin ${{ github.base_ref }}
+          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+          SERVER_FILES_CHANGED=$(echo "$CHANGED_FILES" | grep -E '^server/' || true)
+
+          if [ -z "$SERVER_FILES_CHANGED" ]; then
+            echo "⏭️ No server files changed, skipping version check"
+            echo ""
+            echo "Changed files:"
+            echo "$CHANGED_FILES" | sed 's/^/  /'
+            exit 0
+          fi
+
+          # Get server version
           PR_SERVER_VERSION=$(grep '^version = ' server/Cargo.toml | head -1 | cut -d'"' -f2)
           MAIN_SERVER_VERSION=$(git show origin/${{ github.base_ref }}:server/Cargo.toml | grep '^version = ' | head -1 | cut -d'"' -f2)
 
