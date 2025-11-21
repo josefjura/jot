@@ -16,7 +16,6 @@ mod jwt;
 mod model;
 mod router;
 mod state;
-mod util;
 
 #[tokio::main]
 async fn main() -> Result<(), ApplicationError> {

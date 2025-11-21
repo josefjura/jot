@@ -76,10 +76,11 @@ mod test {
     use crate::jwt::{hash_password, verify_password};
 
     #[test]
-    fn test_token_claims() {
-        let hash = hash_password("pass").unwrap();
+    fn test_token_claims() -> Result<(), Box<dyn std::error::Error>> {
+        let hash = hash_password("pass")?;
         println!("hash: {}", hash);
         let valid = verify_password("pass", &hash);
         assert!(valid);
+        Ok(())
     }
 }
