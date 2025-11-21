@@ -1,0 +1,171 @@
+name: Server CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'server/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - '.github/workflows/server-ci.yml'
+  pull_request:
+    paths:
+      - 'server/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - '.github/workflows/server-ci.yml'
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  # Fast checks that run first
+  format:
+    name: Check formatting
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - name: Check formatting
+        run: cargo fmt --package jot-server --check
+
+  clippy:
+    name: Clippy lints
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo index
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo-git-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache target directory
+        uses: actions/cache@v4
+        with:
+          path: target
+          key: ${{ runner.os }}-target-clippy-server-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Run Clippy
+        run: cargo clippy --package jot-server --all-targets --all-features -- -D warnings
+
+  # Version bump check for PRs
+  version-check:
+    name: Check server version bump
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check if version was bumped
+        run: |
+          # Skip if PR has the 'skip-version-check' label
+          if echo '${{ toJson(github.event.pull_request.labels.*.name) }}' | grep -q 'skip-version-check'; then
+            echo "⏭️ Skipping version check (skip-version-check label present)"
+            exit 0
+          fi
+
+          # Get server version
+          git fetch origin ${{ github.base_ref }}
+          PR_SERVER_VERSION=$(grep '^version = ' server/Cargo.toml | head -1 | cut -d'"' -f2)
+          MAIN_SERVER_VERSION=$(git show origin/${{ github.base_ref }}:server/Cargo.toml | grep '^version = ' | head -1 | cut -d'"' -f2)
+
+          echo "Server: $MAIN_SERVER_VERSION → $PR_SERVER_VERSION"
+
+          # Check if version was bumped
+          if [ "$PR_SERVER_VERSION" = "$MAIN_SERVER_VERSION" ]; then
+            echo ""
+            echo "❌ No version bump detected in server/Cargo.toml"
+            echo ""
+            echo "Please bump the version, or add the 'skip-version-check' label"
+            echo "for documentation/chore changes that don't require a version bump."
+            exit 1
+          else
+            echo ""
+            echo "✅ Version bump detected!"
+          fi
+
+  # Test on Linux only for server (it's not a cross-platform CLI)
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo index
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo-git-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache target directory
+        uses: actions/cache@v4
+        with:
+          path: target
+          key: ${{ runner.os }}-target-server-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Check compilation
+        run: cargo check --package jot-server --all-targets
+
+      - name: Run tests
+        run: cargo test --package jot-server --all-targets
+
+  # Build check
+  build:
+    name: Build check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo index
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo-git-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache target directory
+        uses: actions/cache@v4
+        with:
+          path: target
+          key: ${{ runner.os }}-target-build-server-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build release
+        run: cargo build --release --package jot-server

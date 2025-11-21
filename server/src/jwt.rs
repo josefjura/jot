@@ -40,14 +40,14 @@ pub fn verify_password(password: &str, hashed_password: &str) -> bool {
     let is_valid = match PasswordHash::new(hashed_password) {
         Ok(parsed_hash) => Argon2::default()
             .verify_password(password.as_bytes(), &parsed_hash)
-            .map_or(false, |_| true),
+            .is_ok_and(|_| true),
         Err(_err) => false,
     };
 
     is_valid
 }
 
-pub fn create_token(user_id: i64, secret: &[u8]) -> Result<String, AuthError> {
+pub fn create_token(user_id: &str, secret: &[u8]) -> Result<String, AuthError> {
     let now = chrono::Utc::now();
     let iat = now.timestamp() as usize;
     let exp = (now + chrono::Duration::days(7)).timestamp() as usize;
@@ -76,10 +76,11 @@ mod test {
     use crate::jwt::{hash_password, verify_password};
 
     #[test]
-    fn test_token_claims() {
-        let hash = hash_password("pass").unwrap();
+    fn test_token_claims() -> Result<(), Box<dyn std::error::Error>> {
+        let hash = hash_password("pass")?;
         println!("hash: {}", hash);
         let valid = verify_password("pass", &hash);
         assert!(valid);
+        Ok(())
     }
 }

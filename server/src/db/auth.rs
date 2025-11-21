@@ -1,4 +1,4 @@
-use sqlx::SqlitePool;
+use rusqlite::{params, Connection, Result};
 
 use crate::{
     errors::{AuthError, DbError},
@@ -9,113 +9,98 @@ use crate::{
     },
 };
 
-pub async fn check_email_password(
+pub fn check_email_password(
     email: &str,
     password: String,
-    db: &SqlitePool,
+    conn: &Connection,
 ) -> Result<User, AuthError> {
-    let user = sqlx::query_as!(
-        UserEntity,
-        r#"
-				SELECT id, name, email, password
-				FROM users
-				WHERE email = ?
-			"#,
-        email
-    )
-    .fetch_optional(db)
-    .await
-    .map_err(|_| AuthError::DatabaseError)?;
+    let mut stmt = conn
+        .prepare("SELECT id, name, email, password FROM users WHERE email = ?")
+        .map_err(|_| AuthError::DatabaseError)?;
+
+    let user = stmt.query_row(params![email], |row| {
+        Ok(UserEntity {
+            id: row.get(0)?,
+            name: row.get(1)?,
+            email: row.get(2)?,
+            password: row.get(3)?,
+        })
+    });
 
     match user {
-        Some(user) => {
+        Ok(user) => {
             if verify_password(&password, &user.password) {
                 Ok(user.into())
             } else {
-                Err(AuthError::PasswordIncorrect)?
+                Err(AuthError::PasswordIncorrect)
             }
         }
-        None => Err(AuthError::UserNotFound)?,
+        Err(rusqlite::Error::QueryReturnedNoRows) => Err(AuthError::UserNotFound),
+        Err(_) => Err(AuthError::DatabaseError),
     }
 }
 
-pub async fn create_device_challenge(device_code: String, db: &SqlitePool) -> Result<(), DbError> {
-    sqlx::query!(
-        r#"
-			INSERT INTO device_auth (device_code)
-			VALUES (?)
-		"#,
-        device_code
-    )
-    .execute(db)
-    .await
-    .map_err(DbError::Unknown)?;
+pub fn create_device_challenge(
+    device_code: String,
+    user_code: String,
+    conn: &Connection,
+) -> Result<(), DbError> {
+    let now = chrono::Utc::now().timestamp();
+    let expires_at = now + 600; // 10 minutes
+
+    conn.execute(
+        "INSERT INTO device_auth (device_code, user_code, expires_at, created_at) VALUES (?, ?, ?, ?)",
+        params![device_code, user_code, expires_at, now]
+    ).map_err(|e| DbError::Unknown(e.to_string()))?;
 
     Ok(())
 }
 
-pub async fn add_token_to_device_challenge(
+pub fn add_token_to_device_challenge(
     device_code: &str,
-    token: String,
-    db: &SqlitePool,
+    user_id: String,
+    conn: &Connection,
 ) -> Result<bool, DbError> {
-    let query = sqlx::query!(
-        r#"
-			UPDATE device_auth
-			SET token = ?
-			WHERE device_code = ?
-		"#,
-        token,
-        device_code
-    )
-    .execute(db)
-    .await
-    .map_err(DbError::Unknown)?;
+    let rows = conn
+        .execute(
+            "UPDATE device_auth SET user_id = ? WHERE device_code = ?",
+            params![user_id, device_code],
+        )
+        .map_err(|e| DbError::Unknown(e.to_string()))?;
 
-    if query.rows_affected() == 0 {
-        return Ok(false);
-    }
-
-    Ok(true)
+    Ok(rows > 0)
 }
 
-pub async fn delete_device_challenge(
-    device_code: String,
-    db: &SqlitePool,
-) -> Result<bool, DbError> {
-    let query = sqlx::query!(
-        r#"
-			DELETE FROM device_auth
-			WHERE device_code = ?
-		"#,
-        device_code
-    )
-    .execute(db)
-    .await
-    .map_err(DbError::Unknown)?;
+pub fn delete_device_challenge(device_code: String, conn: &Connection) -> Result<bool, DbError> {
+    let rows = conn
+        .execute(
+            "DELETE FROM device_auth WHERE device_code = ?",
+            params![device_code],
+        )
+        .map_err(|e| DbError::Unknown(e.to_string()))?;
 
-    Ok(query.rows_affected() > 0)
+    Ok(rows > 0)
 }
 
-pub async fn get_token_from_device_challenge(
+pub fn get_token_from_device_challenge(
     device_code: String,
-    db: &SqlitePool,
+    conn: &Connection,
 ) -> Result<ChallengeResult, DbError> {
     let current_time = chrono::Utc::now().timestamp();
 
-    let auth = sqlx::query!(
-        "SELECT token FROM device_auth WHERE device_code = ? AND expire_date > ?",
-        device_code,
-        current_time
-    )
-    .fetch_optional(db)
-    .await
-    .map_err(DbError::Unknown)?;
+    let mut stmt = conn
+        .prepare("SELECT user_id FROM device_auth WHERE device_code = ? AND expires_at > ?")
+        .map_err(|e| DbError::Unknown(e.to_string()))?;
 
-    let challenge_result = match auth.map(|a| a.token) {
-        None => ChallengeResult::NoChallenge,
-        Some(None) => ChallengeResult::Pending,
-        Some(Some(token)) => ChallengeResult::Success(token),
+    let user_id = stmt.query_row(params![device_code, current_time], |row| {
+        row.get::<_, Option<String>>(0)
+    });
+
+    let challenge_result = match user_id {
+        Err(rusqlite::Error::QueryReturnedNoRows) => ChallengeResult::NoChallenge,
+        Ok(None) => ChallengeResult::Pending,
+        Ok(Some(user_id)) => ChallengeResult::Success(user_id),
+        Err(e) => return Err(DbError::Unknown(e.to_string())),
     };
 
     Ok(challenge_result)

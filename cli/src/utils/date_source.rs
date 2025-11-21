@@ -1,10 +1,12 @@
+use std::fmt;
 use std::str::FromStr;
 
 use chrono::{Days, Local, NaiveDate};
 use serde::{Deserialize, Deserializer, Serialize};
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Default)]
 pub enum DateSource {
+    #[default]
     Today,
     Yesterday,
     Tomorrow,
@@ -38,22 +40,18 @@ impl<'de> Deserialize<'de> for DateSource {
             "today" => Ok(DateSource::Today),
             "yesterday" => Ok(DateSource::Yesterday),
             "tomorrow" => Ok(DateSource::Tomorrow),
-            date => Ok(DateSource::Specific(
-                NaiveDate::parse_from_str(date, "%Y-%m-%d").unwrap(),
-            )),
+            date => {
+                let parsed_date = NaiveDate::parse_from_str(date, "%Y-%m-%d")
+                    .map_err(serde::de::Error::custom)?;
+                Ok(DateSource::Specific(parsed_date))
+            }
         }
     }
 }
 
-impl ToString for DateSource {
-    fn to_string(&self) -> String {
-        self.to_date().format("%Y-%m-%d").to_string()
-    }
-}
-
-impl Default for DateSource {
-    fn default() -> Self {
-        Self::Today
+impl fmt::Display for DateSource {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.to_date().format("%Y-%m-%d"))
     }
 }
 
@@ -76,6 +74,8 @@ impl DateSource {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used, clippy::panic)]
+
     use chrono::Datelike;
 
     use super::*;

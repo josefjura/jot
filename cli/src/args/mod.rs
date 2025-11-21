@@ -20,53 +20,60 @@ pub struct CliArgs {
 
 #[derive(Debug, Args, Serialize)]
 pub struct ConfigArgs {
-    /// Mock server requests
-    #[cfg(debug_assertions)]
-    #[arg(long, short, default_value_t = false)]
-    pub mock: bool,
-
-    /// Parameter for mock specification
-    #[cfg(debug_assertions)]
-    #[arg(long)]
-    pub mock_param: Option<String>,
-
-    /// Mock server requests
+    /// Profile name to use
     #[arg(long, short, env = "JOT_PROFILE")]
-    pub profile_path: Option<String>,
-
-    /// Mock server requests
-    #[arg(long, short)]
-    pub server_url: Option<String>,
+    pub profile: Option<String>,
 }
 
-#[derive(Debug, Subcommand, Serialize, PartialEq)]
+#[derive(Debug, Subcommand, PartialEq)]
 pub enum Command {
-    /// Authenticates user against server
-    Login,
-    /// Prints out curent configuration
+    /// Prints out current configuration
     Config,
-    /// Initializes a new profile
-    Init,
+    /// Profile management (defaults to showing current profile)
+    Profile {
+        #[clap(subcommand)]
+        command: Option<ProfileCommand>,
+    },
     /// Notes subcommands
     #[clap(subcommand)]
     Note(NoteCommand),
     /// Creates a new note. Alias for 'note add'.
     Down(NoteAddArgs),
+    /// Search notes. Alias for 'note search'.
+    #[clap(name = "ls")]
+    List(NoteSearchArgs),
+    /// Generate shell completion scripts
+    Completion {
+        /// Shell type
+        #[arg(value_enum)]
+        shell: clap_complete::Shell,
+    },
 }
 
-pub enum CommandGroup {
-    WithClient(Command),
-    WithoutClient(Command),
+#[derive(Debug, Subcommand, Serialize, PartialEq)]
+pub enum ProfileCommand {
+    /// Switch to a profile (creates it if it doesn't exist)
+    Use { name: String },
+    /// List all available profiles
+    List,
+    /// Show current active profile
+    Current,
 }
 
 #[derive(Debug, Subcommand, Serialize, PartialEq)]
 pub enum NoteCommand {
     /// Creates a new note.
     Add(NoteAddArgs),
-    /// Lists notes.
+    /// Search notes.
+    #[clap(visible_alias = "ls")]
     Search(NoteSearchArgs),
     /// Get latest note.
+    #[clap(visible_alias = "latest")]
     Last(NoteLatestArgs),
+    /// Edit a note.
+    Edit(NoteEditArgs),
+    /// Delete a note (soft delete).
+    Delete(NoteDeleteArgs),
 }
 
 #[derive(Debug, Args, Serialize, PartialEq)]
@@ -77,25 +84,25 @@ pub struct NoteAddArgs {
     /// Note content
     #[arg(trailing_var_arg = true)]
     pub content: Vec<String>,
-    /// Open in external editor
-    #[arg(long, short, default_value_t = false)]
-    pub edit: bool,
-    /// Filter by tags (can be specified multiple times or comma-separated)
-    #[arg(long, value_name = "TAGS", value_delimiter = ',')]
+    /// Open in external editor for interactive editing
+    #[arg(long, short = 'e', default_value_t = false)]
+    pub editor: bool,
+    /// Add tags to note (can be specified multiple times or comma-separated)
+    #[arg(long, short = 't', value_name = "TAGS", value_delimiter = ',')]
     pub tag: Vec<String>,
+    /// Quiet mode: only output the note ID
+    #[arg(long, short = 'q', default_value_t = false)]
+    pub quiet: bool,
 }
 
-#[derive(Debug, Clone, ValueEnum, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, ValueEnum, PartialEq, Serialize, Deserialize, Default)]
 pub enum OutputFormat {
+    #[default]
     Pretty,
     Plain,
     Json,
-}
-
-impl Default for OutputFormat {
-    fn default() -> Self {
-        Self::Pretty
-    }
+    /// Output only note IDs (one per line)
+    Id,
 }
 
 #[derive(Debug, clap::Args, PartialEq, Serialize, Deserialize)]
@@ -106,7 +113,7 @@ pub struct NoteSearchArgs {
     pub term: Option<String>,
 
     /// Filter by tags (can be specified multiple times or comma-separated)
-    #[arg(long, value_name = "TAGS", value_delimiter = ',')]
+    #[arg(long, short = 't', value_name = "TAGS", value_delimiter = ',')]
     pub tag: Vec<String>,
 
     /// Filter by date (e.g., "today", "last week", "2024-03-16")
@@ -114,11 +121,11 @@ pub struct NoteSearchArgs {
     pub date: Option<DateTarget>,
 
     /// Number of lines to display for each note (default: full content)
-    #[arg(long, value_name = "N")]
+    #[arg(long, short = 'L', value_name = "N")]
     pub lines: Option<usize>,
 
     /// Maximum number of results to return
-    #[arg(long, short = 'l')]
+    #[arg(long, short = 'n')]
     pub limit: Option<i64>,
 
     /// Output format (pretty, plain, or json)
@@ -127,14 +134,14 @@ pub struct NoteSearchArgs {
 }
 
 #[derive(Debug, clap::Args, PartialEq, Serialize, Deserialize)]
-#[command(about = "Retrieve the latest order")]
+#[command(about = "Retrieve the latest note")]
 pub struct NoteLatestArgs {
     /// Search term to filter notes
     #[arg(default_value = None)]
     pub term: Option<String>,
 
     /// Filter by tags (can be specified multiple times or comma-separated)
-    #[arg(long, value_name = "TAGS", value_delimiter = ',')]
+    #[arg(long, short = 't', value_name = "TAGS", value_delimiter = ',')]
     pub tag: Vec<String>,
 
     /// Output format (pretty, plain, or json)
@@ -156,9 +163,27 @@ impl Default for NoteSearchArgs {
 }
 
 pub fn parse_date_target(s: &str) -> anyhow::Result<DateTarget> {
-    return s.parse();
+    s.parse()
 }
 
 pub fn parse_date_source(s: &str) -> anyhow::Result<DateSource> {
-    return s.parse();
+    s.parse()
+}
+
+#[derive(Debug, Args, Serialize, PartialEq)]
+pub struct NoteEditArgs {
+    /// Note ID to edit (if not provided, edits the most recent note)
+    #[arg(value_name = "ID")]
+    pub id: Option<String>,
+}
+
+#[derive(Debug, Args, Serialize, PartialEq)]
+pub struct NoteDeleteArgs {
+    /// Note ID(s) to delete (if not provided, deletes the most recent note)
+    #[arg(value_name = "ID")]
+    pub ids: Vec<String>,
+
+    /// Skip confirmation prompt
+    #[arg(long, short = 'y')]
+    pub yes: bool,
 }

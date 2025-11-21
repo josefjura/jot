@@ -1,49 +1,46 @@
-use std::path::Path;
+#![allow(clippy::unwrap_used)]
+#![allow(deprecated)]
 
 use assert_cmd::Command;
 use predicates::prelude::{
     predicate::str::{contains, is_empty},
     PredicateBooleanExt,
 };
-use tempfile::TempDir;
 
 pub mod asserts;
 mod e2e;
+mod note_operations;
 pub mod test_context;
 
 #[test]
 fn test_profile_arg() {
+    // Test that --profile arg overrides JOT_PROFILE env var
     let mut cmd = Command::cargo_bin("jot-cli").unwrap();
 
     let assert = cmd
-        .env("JOT_PROFILE", "bad_test.toml")
-        .args(&["--profile-path", "test_assets/profile/default.toml"])
+        .env("JOT_PROFILE", "wrong_profile")
+        .args(["--profile", "test_profile_arg"])
         .arg("config")
         .assert();
 
     assert
         .success()
-        .stdout(
-            contains(r#""profile_path": "test_assets/profile/default.toml""#)
-                .and(contains(r#""server_url": "asset_toml_server_url""#)),
-        )
+        .stdout(contains(r#""profile_name": "test_profile_arg""#).and(contains(r#""db_path""#)))
         .stderr(is_empty());
 }
 
 #[test]
 fn test_profile_env() {
+    // Test that JOT_PROFILE env var sets the profile name
     let mut cmd = Command::cargo_bin("jot-cli").unwrap();
 
     let assert = cmd
-        .env("JOT_PROFILE", "test_assets/profile/default.toml")
+        .env("JOT_PROFILE", "test_profile_env")
         .arg("config")
         .assert();
 
     assert
         .success()
-        .stdout(
-            contains(r#""profile_path": "test_assets/profile/default.toml""#)
-                .and(contains(r#""server_url": "asset_toml_server_url""#)),
-        )
+        .stdout(contains(r#""profile_name": "test_profile_env""#).and(contains(r#""db_path""#)))
         .stderr(is_empty());
 }

@@ -1,0 +1,187 @@
+name: CLI CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'cli/**'
+      - 'core/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - '.github/workflows/cli-ci.yml'
+  pull_request:
+    paths:
+      - 'cli/**'
+      - 'core/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - '.github/workflows/cli-ci.yml'
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  # Fast checks that run first
+  format:
+    name: Check formatting
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - name: Check formatting
+        run: cargo fmt --package jot-cli --package jot-core --check
+
+  clippy:
+    name: Clippy lints
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo index
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo-git-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache target directory
+        uses: actions/cache@v4
+        with:
+          path: target
+          key: ${{ runner.os }}-target-clippy-cli-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Run Clippy
+        run: cargo clippy --package jot-cli --package jot-core --all-targets --all-features -- -D warnings
+
+  # Version bump check for PRs
+  version-check:
+    name: Check CLI version bump
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check if version was bumped
+        run: |
+          # Skip if PR has the 'skip-version-check' label
+          if echo '${{ toJson(github.event.pull_request.labels.*.name) }}' | grep -q 'skip-version-check'; then
+            echo "⏭️ Skipping version check (skip-version-check label present)"
+            exit 0
+          fi
+
+          # Get CLI version
+          git fetch origin ${{ github.base_ref }}
+          PR_CLI_VERSION=$(grep '^version = ' cli/Cargo.toml | head -1 | cut -d'"' -f2)
+          MAIN_CLI_VERSION=$(git show origin/${{ github.base_ref }}:cli/Cargo.toml | grep '^version = ' | head -1 | cut -d'"' -f2)
+
+          echo "CLI: $MAIN_CLI_VERSION → $PR_CLI_VERSION"
+
+          # Check if version was bumped
+          if [ "$PR_CLI_VERSION" = "$MAIN_CLI_VERSION" ]; then
+            echo ""
+            echo "❌ No version bump detected in cli/Cargo.toml"
+            echo ""
+            echo "Please bump the version, or add the 'skip-version-check' label"
+            echo "for documentation/chore changes that don't require a version bump."
+            exit 1
+          else
+            echo ""
+            echo "✅ Version bump detected!"
+          fi
+
+  # Test matrix across platforms and Rust versions
+  test:
+    name: Test (${{ matrix.os }}, ${{ matrix.rust }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        rust: [stable, nightly]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.rust }}
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo index
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo-git-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache target directory
+        uses: actions/cache@v4
+        with:
+          path: target
+          key: ${{ runner.os }}-${{ matrix.rust }}-target-cli-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Check compilation
+        run: cargo check --package jot-cli --package jot-core --all-targets
+
+      - name: Build binaries (required for integration tests)
+        run: cargo build --package jot-cli
+
+      - name: Run tests
+        run: cargo test --package jot-cli --package jot-core --all-targets
+
+      - name: Run doc tests
+        run: cargo test --package jot-cli --package jot-core --doc
+
+  # Minimal test to ensure basic build works
+  build:
+    name: Build check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo index
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo-git-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache target directory
+        uses: actions/cache@v4
+        with:
+          path: target
+          key: ${{ runner.os }}-target-build-cli-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build release
+        run: cargo build --release --package jot-cli

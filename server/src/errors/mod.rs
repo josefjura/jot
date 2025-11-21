@@ -19,17 +19,15 @@ pub enum ApplicationError {
     #[error("Error while starting the server. Error: {0}")]
     CannotServe(std::io::Error),
 
-    #[error("Error while connecting to the database. Error: {0}")]
-    DatabaseError(#[from] sqlx::Error),
-
     #[error("Missing environment value: {1}")]
     EnvError(#[source] VarError, String),
+
+    #[error("Internal error: {0}")]
+    Internal(String),
 }
 
 #[derive(Error, Debug)]
 pub enum RestError {
-    #[error("Resource not found")]
-    NotFound,
     #[error("Invalid input: {0}")]
     InvalidInput(String),
     #[error("Database error: {0}")]
@@ -43,11 +41,7 @@ pub enum RestError {
 #[derive(Error, Debug)]
 pub enum DbError {
     #[error("Error communicating with database: {0}")]
-    Unknown(#[from] sqlx::Error),
-    #[error("Error mapping entity: {0}")]
-    EntityMapping(String),
-    #[error("Error creating note: {0}")]
-    UnableToCreate(String),
+    Unknown(String),
 }
 
 #[derive(Error, Debug, Clone)]
@@ -58,8 +52,6 @@ pub enum AuthError {
     UserNotFound,
     #[error("Token was not found")]
     TokenNotFound,
-    #[error("Token is not valid")]
-    TokenInvalid,
     #[error("Error while connecting to the database.")]
     DatabaseError,
     #[error("Error while creating a token.")]
@@ -68,26 +60,15 @@ pub enum AuthError {
     PasswordHash(String),
 }
 
-#[derive(Error, Debug, Clone)]
-pub enum DateFilterError {
-    #[error("Cannot parse date filter: {0}")]
-    ParseError(String),
-}
-
 // Implementation to convert AppError into a Response
 impl IntoResponse for RestError {
     fn into_response(self) -> Response {
         let (status, error_message) = match self {
-            RestError::NotFound => (
-                StatusCode::NOT_FOUND,
-                Json(AppErrorDto::new(&self.to_string()).with_status(StatusCode::NOT_FOUND)),
-            ),
             RestError::InvalidInput(_) => (
                 StatusCode::BAD_REQUEST,
                 Json(AppErrorDto::new(&self.to_string()).with_status(StatusCode::BAD_REQUEST)),
             ),
-            RestError::Authorization(AuthError::TokenInvalid)
-            | RestError::Authorization(AuthError::TokenNotFound) => (
+            RestError::Authorization(AuthError::TokenNotFound) => (
                 StatusCode::FORBIDDEN,
                 Json(AppErrorDto::new(&self.to_string()).with_status(StatusCode::FORBIDDEN)),
             ),

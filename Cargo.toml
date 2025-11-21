@@ -1,0 +1,11 @@
+[workspace]
+members = ["core", "cli", "server"]
+resolver = "2"
+
+[workspace.dependencies]
+jot-core = { path = "./core" }
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"

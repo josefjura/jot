@@ -1,1 +1,1 @@
-server_url = "asset_toml_server_url"
+db_path = "./notes.db"

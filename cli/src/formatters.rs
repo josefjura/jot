@@ -1,7 +1,5 @@
-use crate::{
-    args::{NoteSearchArgs, OutputFormat},
-    model::Note,
-};
+use crate::args::{NoteSearchArgs, OutputFormat};
+use jot_core::Note;
 use std::io::{self, Write};
 use termcolor::{BufferWriter, Color, ColorChoice, ColorSpec, WriteColor};
 
@@ -15,6 +13,7 @@ impl NoteSearchFormatter {
         let color_choice = match args.output {
             OutputFormat::Plain => ColorChoice::Never,
             OutputFormat::Json => ColorChoice::Never,
+            OutputFormat::Id => ColorChoice::Never,
             OutputFormat::Pretty => ColorChoice::Auto,
         };
 
@@ -27,14 +26,26 @@ impl NoteSearchFormatter {
     pub fn print_notes(&mut self, notes: &[Note]) -> io::Result<()> {
         let mut buffer = self.writer.buffer();
 
-        if self.args.output == OutputFormat::Json {
-            self.print_json(notes, &mut buffer)?;
-        } else {
-            if notes.is_empty() {
-                writeln!(buffer, "No notes found")?;
-            } else {
+        match self.args.output {
+            OutputFormat::Json => {
+                self.print_json(notes, &mut buffer)?;
+            }
+            OutputFormat::Id => {
                 for note in notes {
-                    self.print_note(&mut buffer, note, self.args.output == OutputFormat::Pretty)?;
+                    writeln!(buffer, "{}", note.id)?;
+                }
+            }
+            _ => {
+                if notes.is_empty() {
+                    writeln!(buffer, "No notes found")?;
+                } else {
+                    for note in notes {
+                        self.print_note(
+                            &mut buffer,
+                            note,
+                            self.args.output == OutputFormat::Pretty,
+                        )?;
+                    }
                 }
             }
         }
@@ -72,14 +83,12 @@ impl NoteSearchFormatter {
                 .set_intense(false),
         )?;
 
-        writeln!(buffer, "\u{1F4CB} #{}", note.id.unwrap_or(0))?;
+        writeln!(buffer, "\u{1F4CB} {}", &note.id[..8])?; // Show first 8 chars of ULID
 
-        write!(
-            buffer,
-            "\u{1F4C5} [{}]",
-            note.created_at.format("%Y-%m-%d %H:%M")
-        )?;
-        writeln!(buffer, "[{}]", note.updated_at.format("%Y-%m-%d %H:%M"))?;
+        // Show note date if present
+        if let Some(ref date) = note.date {
+            writeln!(buffer, "\u{1F4C5} {}", date)?;
+        }
 
         if !note.tags.is_empty() {
             write!(buffer, "\u{1F516}")?;
@@ -94,13 +103,15 @@ impl NoteSearchFormatter {
     fn print_metadata(&self, buffer: &mut termcolor::Buffer, note: &Note) -> io::Result<()> {
         let mut metadata = Vec::new();
 
-        metadata.push(format!("#{}", note.id.unwrap_or(0)));
+        metadata.push(note.id[..8].to_string()); // Show first 8 chars of ULID
 
-        metadata.push(format!("[{}]", note.created_at.format("%Y-%m-%d %H:%M")));
-        metadata.push(format!("[{}]", note.updated_at.format("%Y-%m-%d %H:%M")));
+        // Show note date if present
+        if let Some(ref date) = note.date {
+            metadata.push(format!("[{}]", date));
+        }
 
         if !note.tags.is_empty() {
-            metadata.push(format!(" [{}]", note.tags.join(",")));
+            metadata.push(format!("[{}]", note.tags.join(",")));
         }
 
         write!(buffer, "{} ", metadata.join(" "))?;
@@ -117,15 +128,14 @@ impl NoteSearchFormatter {
     }
 
     fn print_json(&mut self, notes: &[Note], buffer: &mut termcolor::Buffer) -> io::Result<()> {
-        let json = serde_json::to_string_pretty(notes)
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        let json = serde_json::to_string_pretty(notes).map_err(io::Error::other)?;
 
         writeln!(buffer, "{}", json)?;
         Ok(())
     }
 
     fn create_preview(&self, content: &str) -> String {
-        let max_lines = self.args.lines.unwrap_or(std::usize::MAX);
+        let max_lines = self.args.lines.unwrap_or(usize::MAX);
         let preview: String = content
             .lines()
             .take(max_lines)

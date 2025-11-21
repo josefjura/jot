@@ -1,6 +1,7 @@
+use std::fmt;
 use std::str::FromStr;
 
-use chrono::{NaiveDate, NaiveDateTime};
+use chrono::{Days, Local, NaiveDate};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
@@ -15,6 +16,50 @@ pub enum DateTarget {
     NextWeek,
     NextMonth,
     Specific(NaiveDate),
+}
+
+impl DateTarget {
+    /// Convert DateTarget to a date range (from, to).
+    /// Returns (None, None) for All, (Some, None) for Past/Future, (Some, Some) for specific ranges.
+    pub fn to_date_range(&self) -> (Option<NaiveDate>, Option<NaiveDate>) {
+        let today = Local::now().date_naive();
+
+        match self {
+            DateTarget::All => (None, None),
+            DateTarget::Past => (None, Some(today.pred_opt().unwrap_or(today))),
+            DateTarget::Future => (Some(today.succ_opt().unwrap_or(today)), None),
+            DateTarget::Today => (Some(today), Some(today)),
+            DateTarget::Yesterday => {
+                let yesterday = today.pred_opt().unwrap_or(today);
+                (Some(yesterday), Some(yesterday))
+            }
+            DateTarget::LastWeek => {
+                // Last week = 7 days ago to yesterday (inclusive)
+                let end = today.pred_opt().unwrap_or(today);
+                let start = today.checked_sub_days(Days::new(7)).unwrap_or(today);
+                (Some(start), Some(end))
+            }
+            DateTarget::LastMonth => {
+                // Last month = 30 days ago to yesterday (inclusive)
+                let end = today.pred_opt().unwrap_or(today);
+                let start = today.checked_sub_days(Days::new(30)).unwrap_or(today);
+                (Some(start), Some(end))
+            }
+            DateTarget::NextWeek => {
+                // Next week = tomorrow to 7 days from now (inclusive)
+                let start = today.succ_opt().unwrap_or(today);
+                let end = today.checked_add_days(Days::new(7)).unwrap_or(today);
+                (Some(start), Some(end))
+            }
+            DateTarget::NextMonth => {
+                // Next month = tomorrow to 30 days from now (inclusive)
+                let start = today.succ_opt().unwrap_or(today);
+                let end = today.checked_add_days(Days::new(30)).unwrap_or(today);
+                (Some(start), Some(end))
+            }
+            DateTarget::Specific(date) => (Some(*date), Some(*date)),
+        }
+    }
 }
 
 impl FromStr for DateTarget {
@@ -39,19 +84,19 @@ impl FromStr for DateTarget {
     }
 }
 
-impl ToString for DateTarget {
-    fn to_string(&self) -> String {
+impl fmt::Display for DateTarget {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            DateTarget::All => "all".to_string(),
-            DateTarget::Past => "past".to_string(),
-            DateTarget::Future => "future".to_string(),
-            DateTarget::Today => "today".to_string(),
-            DateTarget::Yesterday => "yesterday".to_string(),
-            DateTarget::LastWeek => "last week".to_string(),
-            DateTarget::LastMonth => "last month".to_string(),
-            DateTarget::NextWeek => "next week".to_string(),
-            DateTarget::NextMonth => "next month".to_string(),
-            DateTarget::Specific(dt) => dt.to_string(),
+            DateTarget::All => write!(f, "all"),
+            DateTarget::Past => write!(f, "past"),
+            DateTarget::Future => write!(f, "future"),
+            DateTarget::Today => write!(f, "today"),
+            DateTarget::Yesterday => write!(f, "yesterday"),
+            DateTarget::LastWeek => write!(f, "last week"),
+            DateTarget::LastMonth => write!(f, "last month"),
+            DateTarget::NextWeek => write!(f, "next week"),
+            DateTarget::NextMonth => write!(f, "next month"),
+            DateTarget::Specific(dt) => write!(f, "{}", dt),
         }
     }
 }
@@ -68,6 +113,8 @@ impl Serialize for DateTarget {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used, clippy::panic)]
+
     use chrono::Datelike;
 
     use super::*;
