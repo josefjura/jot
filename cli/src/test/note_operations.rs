@@ -53,7 +53,7 @@ impl TestDb {
     }
 
     fn cmd(&self) -> Command {
-        let mut cmd = Command::cargo_bin("jot-cli").unwrap();
+        let mut cmd = Command::cargo_bin("jot").unwrap();
 
         // Override XDG base directories to use our temp dir
         let config_dir = self._temp_dir.path().join("config");
