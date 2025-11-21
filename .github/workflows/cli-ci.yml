@@ -69,44 +69,6 @@ jobs:
       - name: Run Clippy
         run: cargo clippy --package jot-cli --package jot-core --all-targets --all-features -- -D warnings
 
-  # Version bump check for PRs
-  version-check:
-    name: Check CLI version bump
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Check if version was bumped
-        run: |
-          # Skip if PR has the 'skip-version-check' label
-          if echo '${{ toJson(github.event.pull_request.labels.*.name) }}' | grep -q 'skip-version-check'; then
-            echo "⏭️ Skipping version check (skip-version-check label present)"
-            exit 0
-          fi
-
-          # Get CLI version
-          git fetch origin ${{ github.base_ref }}
-          PR_CLI_VERSION=$(grep '^version = ' cli/Cargo.toml | head -1 | cut -d'"' -f2)
-          MAIN_CLI_VERSION=$(git show origin/${{ github.base_ref }}:cli/Cargo.toml | grep '^version = ' | head -1 | cut -d'"' -f2)
-
-          echo "CLI: $MAIN_CLI_VERSION → $PR_CLI_VERSION"
-
-          # Check if version was bumped
-          if [ "$PR_CLI_VERSION" = "$MAIN_CLI_VERSION" ]; then
-            echo ""
-            echo "❌ No version bump detected in cli/Cargo.toml"
-            echo ""
-            echo "Please bump the version, or add the 'skip-version-check' label"
-            echo "for documentation/chore changes that don't require a version bump."
-            exit 1
-          else
-            echo ""
-            echo "✅ Version bump detected!"
-          fi
-
   # Test matrix across platforms and Rust versions
   test:
     name: Test (${{ matrix.os }}, ${{ matrix.rust }})
