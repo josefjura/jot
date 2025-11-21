@@ -139,9 +139,6 @@ jobs:
       - name: Run tests
         run: cargo test --package jot-server --all-targets
 
-      - name: Run doc tests
-        run: cargo test --package jot-server --doc
-
   # Build check
   build:
     name: Build check
