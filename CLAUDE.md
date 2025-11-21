@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Jot is a terminal-first note-taking application designed for quick, frictionless note capture. The core philosophy is that opening traditional note apps (Obsidian, OneNote) involves too much overhead (deciding where to save, how to name) when you just want to jot something down quickly. Since terminals are always open for developers, Jot provides instant note capture from the command line.
 
 The application consists of two Rust components:
-- **CLI** (`cli/`): Command-line interface for creating, searching, and managing notes (v0.2.0)
+- **CLI** (`cli/`): Command-line interface for creating, searching, and managing notes (v0.2.1)
 - **Server** (`server/`): REST API backend using Axum framework with SQLite database, designed to run as a Docker container for self-hosted, centralized note storage
 
 ### Key Features & Design Goals
@@ -19,6 +19,7 @@ The application consists of two Rust components:
 - **Editor integration**: `-e` flag opens `$EDITOR` (or `$VISUAL`) for longer-form note editing with TOML frontmatter template
 - **Templating**: Fully implemented - notes opened in editor have TOML frontmatter (tags, date) separated from content by `+++` delimiter
 - **Search & filtering**: Flexible search with `jot note search` (or `jot ls`) supporting term matching, tag filters, date filters, and multiple output formats (pretty/plain/json/id)
+- **Interactive cleanup**: `jot note prune` opens an editor for batch note deletion with git-rebase-style interface
 - **Shell completions**: Built-in completion generation for bash, zsh, fish, powershell, elvish
 - **Scripting support**: Quiet mode (`-q`) outputs only note IDs for pipeline integration
 - **Device-based authentication**: OAuth-like device flow - CLI generates code, opens browser for login, polls for token
@@ -44,6 +45,12 @@ jot note search --output id     # Get IDs for scripting
 # Get latest note
 jot note last                   # or 'jot note latest'
 NOTE_ID=$(jot note add -q "scripting note")  # Quiet mode
+
+# Interactive cleanup
+jot note prune                  # Review and delete last 20 notes
+jot note prune -n 50            # Review last 50 notes
+jot note prune --all            # Review all notes
+jot note prune -t draft,old     # Review notes with specific tags
 
 # Profile management
 jot profile                     # Show current profile
@@ -146,10 +153,11 @@ The CLI uses Clap for argument parsing and follows a command-based architecture:
 - **`commands/`**: Command implementations
   - `config`: Display current configuration
   - `profile`: Profile management (use, list, current)
-  - `note`: Note operations (add, search, last/latest, edit, delete)
+  - `note`: Note operations (add, search, last/latest, edit, delete, prune)
 - **`profile.rs`**: Profile management (TOML configuration files, XDG directories)
 - **`app_config.rs`**: Application configuration merging CLI args, profile, and defaults
 - **`editor.rs`**: External editor integration with TOML frontmatter
+- **`prune.rs`**: Interactive note cleanup with editor-based batch deletion
 - **`formatters.rs`**: Output formatting (pretty, plain, json, id)
 - **`utils/`**: Date parsing utilities (`DateSource`, `DateTarget`)
 - **`db/`**: Local SQLite database operations using `jot-core`
@@ -169,7 +177,7 @@ Configuration precedence: CLI flags > Profile file > Current profile > Defaults
 - `TestDb` helper creates isolated profile environments with unique profile names and temp XDG directories
 - Tests use `XDG_CONFIG_HOME` and `XDG_DATA_HOME` env vars to isolate test data
 - Profile names are generated using UUID to ensure test isolation
-- All 41 tests pass ✅
+- All 56 tests pass ✅ (including prune functionality tests)
 
 ## Code Style & Standards
 
@@ -253,3 +261,38 @@ The `jot note search` (or `jot ls`) command supports:
 - Term matching: `jot ls "meeting notes"`
 
 See `cli/docs/note-search.md` for detailed usage examples.
+
+## Interactive Prune Feature
+
+The `jot note prune` command provides git-rebase-style interactive note cleanup:
+
+**Usage:**
+```bash
+jot note prune [OPTIONS] [TERM]
+
+Options:
+  -n, --limit <N>    Max notes to show (default: 20)
+  --all              Show all notes
+  -t, --tag <TAGS>   Filter by tags
+  --date <DATE>      Filter by date
+  [TERM]             Search term
+```
+
+**Workflow:**
+1. Opens `$EDITOR` with a list of notes in format:
+   ```
+   keep abc123 [2025-01-15] #work First line of note...
+   keep def456 [2025-01-14] #personal Another note...
+   ```
+2. User changes `keep` to `delete` for notes to remove
+3. Saves and exits editor
+4. Shows confirmation prompt with list of notes to be deleted
+5. Permanently deletes notes after user confirms with `y`
+
+**Implementation Details:**
+- Located in `cli/src/prune.rs`
+- Generates scannable file format showing first line of each note (truncated at 80 chars)
+- Supports all search/filter options (tags, dates, terms, limits)
+- Always requires confirmation before deletion
+- Respects `$EDITOR` and `$VISUAL` environment variables
+- Comprehensive unit tests for parsing and generation logic

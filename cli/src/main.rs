@@ -14,6 +14,7 @@ mod db;
 mod editor;
 mod formatters;
 mod profile;
+mod prune;
 mod utils;
 
 #[cfg(test)]

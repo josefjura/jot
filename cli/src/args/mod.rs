@@ -74,6 +74,8 @@ pub enum NoteCommand {
     Edit(NoteEditArgs),
     /// Delete a note (soft delete).
     Delete(NoteDeleteArgs),
+    /// Interactive cleanup of notes.
+    Prune(NotePruneArgs),
 }
 
 #[derive(Debug, Args, Serialize, PartialEq)]
@@ -186,4 +188,27 @@ pub struct NoteDeleteArgs {
     /// Skip confirmation prompt
     #[arg(long, short = 'y')]
     pub yes: bool,
+}
+
+#[derive(Debug, Args, Serialize, PartialEq)]
+pub struct NotePruneArgs {
+    /// Maximum number of notes to show (defaults to 20)
+    #[arg(long, short = 'n', default_value = "20")]
+    pub limit: i64,
+
+    /// Show all notes (overrides -n)
+    #[arg(long, conflicts_with = "limit")]
+    pub all: bool,
+
+    /// Filter by tags (can be specified multiple times or comma-separated)
+    #[arg(long, short = 't', value_name = "TAGS", value_delimiter = ',')]
+    pub tag: Vec<String>,
+
+    /// Filter by date (e.g., "today", "last week", "2024-03-16")
+    #[arg(long, value_name = "DATE", value_parser = parse_date_target)]
+    pub date: Option<DateTarget>,
+
+    /// Search term to filter notes
+    #[arg(value_name = "TERM")]
+    pub term: Option<String>,
 }
